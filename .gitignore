@@ -1,0 +1,36 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.next/
+.turbo/
+coverage/
+
+# Editors
+.idea/
+.vscode/
+
+# Logs / data
+*.log
+data/raw/
