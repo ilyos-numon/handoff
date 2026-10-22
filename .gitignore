@@ -34,3 +34,16 @@ coverage/
 # Logs / data
 *.log
 data/raw/
+.ai/tasks/*/logs/
+.ai/tasks/*/screenshots/*.png
+.ai/tasks/*/.toolcount
+.ai/tasks/*/.*.lock
+.ai/tasks/*/.dev.pid
+.ai/tasks/*/.base-*
+.ai/headless-*.log
+.ai/.headless-session
+.claude/settings.local.json
+out/
+test-results/
+playwright-report/
+*.pyc
