@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>인수인계 지식베이스 채팅</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="card">
+    <h1>인수인계 지식베이스</h1>
+    <div id="chat-log"></div>
+    <form id="chat-form">
+      <textarea id="chat-input" rows="3" placeholder="궁금한 것을 물어보세요"></textarea>
+      <button id="chat-send" type="submit">보내기</button>
+    </form>
+    <p id="chat-error" class="error hidden"></p>
+  </main>
+  <script src="/static/chat.js"></script>
+</body>
+</html>
