@@ -98,6 +98,23 @@ class FakeLLM:
 
 
 def build_providers(settings: Settings) -> tuple[Embedder, LLM]:
-    if settings.provider != "fake":
-        raise ValueError(f"unsupported HANDOFF_PROVIDER: {settings.provider}")
-    return FakeEmbedder(), FakeLLM()
+    if settings.provider == "fake":
+        return FakeEmbedder(), FakeLLM()
+    if settings.provider == "qwen":
+        from handoff.providers_qwen import QwenEmbedder, QwenLLM
+
+        embedder = QwenEmbedder(
+            settings.llm_base_url,
+            settings.embed_model,
+            settings.llm_api_key,
+            settings.embed_dim,
+            settings.llm_timeout_s,
+        )
+        llm = QwenLLM(
+            settings.llm_base_url,
+            settings.llm_model,
+            settings.llm_api_key,
+            settings.llm_timeout_s,
+        )
+        return embedder, llm
+    raise ValueError(f"unsupported HANDOFF_PROVIDER: {settings.provider}")
