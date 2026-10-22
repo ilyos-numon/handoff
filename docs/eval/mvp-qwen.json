@@ -1,0 +1,828 @@
+{
+  "name": "mvp-qwen",
+  "leaver": "eval",
+  "generated_at": "2026-10-22T23:47:18.901005Z",
+  "sessions": [
+    {
+      "number": 1,
+      "session_id": "aa1e6cddb0f748c0aa4b0b369ab6a60e",
+      "nodes": [
+        "sys-01",
+        "rou-01",
+        "inc-01"
+      ],
+      "answers": 6,
+      "elapsed_seconds": 4.891,
+      "summary": [
+        "결제 승인 모듈 배포는 매출 손실 우려로 트래픽 적을 때 진행하며 실패율 지표를 모니터링한다.",
+        "매주 월요일 미정산 거래 목록을 내려받아 공유 드라이브에 업로드하고, 누락 시 반복 알림을 설정했다.",
+        "DB 커넥션 풀 고갈로 6시간 장애가 발생했으며 정산 쿼리 분리는 완료했으나 타임아웃 설정은 미완료 상태다."
+      ]
+    },
+    {
+      "number": 2,
+      "session_id": "e90fcb0f5b5d45369c4100c5332e6fd6",
+      "nodes": [
+        "ppl-01",
+        "sys-02",
+        "rou-02"
+      ],
+      "answers": 6,
+      "elapsed_seconds": 3.407,
+      "summary": [
+        "결제팀 리드에게 메신저로 문의하고, 부재 시 시니어 개발자나 과거 사례를 검색한다.",
+        "주문 서비스와의 의존 관계에서 메시지 큐 적체 지표로 장애를 먼저 감지한다.",
+        "배포 전 변경 목록을 확인하고 후 에러 로그를 점검하며, 금요일과 월말은 배포하지 않는다."
+      ]
+    },
+    {
+      "number": 3,
+      "session_id": "20a350637c1241a182879b55acb19bfc",
+      "nodes": [
+        "inc-02",
+        "ppl-02",
+        "sys-03"
+      ],
+      "answers": 6,
+      "elapsed_seconds": 3.741,
+      "summary": [
+        "결제 대행사 응답 지연 시 승인 서버 스레드 고갈 위험이 있어 회로 차단기 도입이 필요합니다.",
+        "장애 발생 시 관리자 화면에서 결제수단 일시 정지로 다른 수단으로 유도해야 합니다.",
+        "매월 셋째 영업일까지 대행사와 정산 대사 파일을核对하고 차이 건을 표로 정리해 회신합니다."
+      ]
+    },
+    {
+      "number": 4,
+      "session_id": "680daccea048480a93dbfbfcaf8ebb9c",
+      "nodes": [
+        "rou-03",
+        "inc-03",
+        "ppl-03"
+      ],
+      "answers": 6,
+      "elapsed_seconds": 4.31,
+      "summary": [
+        "출근 시 결제 모니터링 대시보드와 알림을 확인하며, 승인 실패율 급증이나 정산 실패 시 즉시 조치 및 보고한",
+        "장애 발생 시 영향 범위와 최근 배포 이력을 빠르게 점검하고 5분 이내 장애 채널에 상황을 공유해야 한다.",
+        "변경 전 결제팀 리드 승인 및 관련 부서 통지가 필수이며, 미통보 시 정산 오류 등 심각한 문제가 발생할 수"
+      ]
+    },
+    {
+      "number": 5,
+      "session_id": "472630d47ada4bd7ad433a7476f3caf1",
+      "nodes": [
+        "sys-04",
+        "rou-04",
+        "inc-04"
+      ],
+      "answers": 6,
+      "elapsed_seconds": 4.42,
+      "summary": [
+        "결제 원장 테이블은 인덱스 타는 조건으로 조회만 하며, 수정 시 백업 후 검토를 받는다.",
+        "인증서와 키는 매년 갱신하며 만료 30일 전 알림을 설정해 대행사 화면에서 교체한다.",
+        "중복 결제는 주문 번호 기준 점검 쿼리로 발견하며, 팀 저장소 폴더에 쿼리가 보관된다."
+      ]
+    },
+    {
+      "number": 6,
+      "session_id": "840d7dab47284914929c5b6ce88622c5",
+      "nodes": [
+        "ppl-04",
+        "sys-05",
+        "rou-05"
+      ],
+      "answers": 6,
+      "elapsed_seconds": 4.221,
+      "summary": [
+        "고객 문의는 상담원이 티켓을 생성해 개발팀에 넘기며, 주문번호 등 필수 정보를 함께 전달해야 합니다.",
+        "결제 연동은 라우팅으로 대행사를 선택하며 타임아웃 5초, 실패 시 1회 재시도 후 실패 처리합니다.",
+        "정산 배치는 결과 확인이 필요하고 실패 시 파일 전송이 중단되므로 이상 시 담당자에게 보고해야 합니다."
+      ]
+    },
+    {
+      "number": 7,
+      "session_id": "665ea4453d954f788cbef323d6a4d834",
+      "nodes": [
+        "inc-05",
+        "ppl-05",
+        "sys-06"
+      ],
+      "answers": 6,
+      "elapsed_seconds": 3.664,
+      "summary": [
+        "할인 계산 오류 시 이전 버전 재배포와 부분 환불로 롤백 처리했습니다.",
+        "DB 구조 변경은 롤백이 불가능해 컬럼 추가, 코드 배포, 삭제를 분리합니다.",
+        "인프라 권한은 요청 게시판으로 신청하며, 긴급 상황 시 장애 채널을 활용합니다."
+      ]
+    },
+    {
+      "number": 8,
+      "session_id": "a73c46eac54e4437a34d0a4bed66f04a",
+      "nodes": [
+        "rou-06",
+        "inc-06",
+        "ppl-06"
+      ],
+      "answers": 6,
+      "elapsed_seconds": 4.146,
+      "summary": [
+        "연말 부가세 신고 자료는 1월 둘째 주까지, 분기별 연동 규칙은 결제 대행사 공지를 통해 반영한다.",
+        "과거 트래픽 폭증 시 서버 증설과 대기열 처리로 대응했으며, 이후 행사 전 인프라를 미리 확장해 둔다.",
+        "보안 검토는 보안팀 담당자와 진행하며, 데이터 흐름도와 암호화 방식 등 자료를 일주일 전에 준비해야 한다."
+      ]
+    },
+    {
+      "number": 9,
+      "session_id": "7c0f35b2c6914a12bd391ba2deb18782",
+      "nodes": [
+        "sys-07",
+        "rou-07",
+        "inc-07"
+      ],
+      "answers": 6,
+      "elapsed_seconds": 3.609,
+      "summary": [
+        "부분 취소 금액 계산 코드는 예외 처리가 복잡하고 테스트 부족으로 인해 수정을 미루고 있다.",
+        "변경 시 대행사별 부분 취소 및 쿠폰 결제 취소 시나리오 테스트를 우선적으로 확인해야 한다.",
+        "모든 변경은 리뷰어 승인 후 병합되며, 급한 수정은 사후 일일 내 리뷰로 예외 처리한다."
+      ]
+    },
+    {
+      "number": 10,
+      "session_id": "7676cc533d6d42858b07a5e8619f77ad",
+      "nodes": [
+        "ppl-07",
+        "sys-08",
+        "rou-08"
+      ],
+      "answers": 6,
+      "elapsed_seconds": 3.419,
+      "summary": [
+        "운영 매니저는 결제 내역 추출을, 기획자는 새 결제수단이나 할인 적용을 요청합니다.",
+        "할인 규칙 변경은 거절하거나 다음 배포로 조정하며, 금액 변경은 최소 사흘 전까지 요청받습니다.",
+        "테스트 환경의 콜백 지연 차이로 운영에서 소액 실결제를 통해 기능을 추가로 확인합니다."
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "id": "q01",
+      "question": "배포를 왜 금요일에는 안 하나요?",
+      "expect_nodes": [
+        "rou-02"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "금요일 배포는 정산 배치 실패 시 주말 내내 문제가 지속되어 월요일에야 수습이 가능했기 때문에 금지됩니다. 또한 배포 후 결과를 확인하려면 다음 날 새벽 배치가 완료되어야 하므로, 금요일 배포 시 일요일까지 결과를 알 수 없어 위험합니다.",
+      "citations": [
+        {
+          "session_number": 2,
+          "question_id": "rou-02",
+          "score": 0.6401
+        },
+        {
+          "session_number": 2,
+          "question_id": "rou-02-f2",
+          "score": 0.575
+        },
+        {
+          "session_number": 1,
+          "question_id": "sys-01",
+          "score": 0.4584
+        }
+      ]
+    },
+    {
+      "id": "q02",
+      "question": "결제 쪽에서 배포할 때 제일 조심해야 하는 데가 어디예요?",
+      "expect_nodes": [
+        "sys-01"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "결제 승인 모듈 배포가 가장 무섭습니다. 승인 요청이 끊기면 바로 매출 손실로 이어지기 때문입니다. 특히 결제 대행사 연동 설정을 함께 바꾸는 경우 승인 실패율이 순간적으로 상승할 수 있어 주의해야 합니다.",
+      "citations": [
+        {
+          "session_number": 1,
+          "question_id": "sys-01",
+          "score": 0.7264
+        },
+        {
+          "session_number": 4,
+          "question_id": "ppl-03",
+          "score": 0.5773
+        },
+        {
+          "session_number": 2,
+          "question_id": "rou-02",
+          "score": 0.5332
+        }
+      ]
+    },
+    {
+      "id": "q03",
+      "question": "결제 완료 이벤트 필드를 바꾸면 어디가 영향을 받아요?",
+      "expect_nodes": [
+        "sys-02"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "결제 완료 이벤트 필드를 변경하면 주문 서비스가 깨질 수 있으므로 필드 추가만 가능합니다. 삭제나 이름 변경은 하지 않아야 하며, 변경 시 테스트 환경 부하 테스트와 결제팀 리드 승인이 필요합니다.",
+      "citations": [
+        {
+          "session_number": 2,
+          "question_id": "sys-02",
+          "score": 0.6279
+        },
+        {
+          "session_number": 3,
+          "question_id": "sys-03-f1",
+          "score": 0.5414
+        },
+        {
+          "session_number": 6,
+          "question_id": "sys-05-f1",
+          "score": 0.5227
+        }
+      ]
+    },
+    {
+      "id": "q04",
+      "question": "운영 DB에서 결제 데이터 조회할 때 조심할 게 있나요?",
+      "expect_nodes": [
+        "sys-04"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "운영 DB에서 결제 데이터 조회 시 반드시 거래 일자 조건을 명시하여 인덱스를 타야 합니다. 또한 운영 데이터베이스에서는 조회 작업만 수행해야 합니다.",
+      "citations": [
+        {
+          "session_number": 5,
+          "question_id": "sys-04",
+          "score": 0.7412
+        },
+        {
+          "session_number": 10,
+          "question_id": "sys-08",
+          "score": 0.5601
+        },
+        {
+          "session_number": 6,
+          "question_id": "rou-05-f1",
+          "score": 0.5191
+        }
+      ]
+    },
+    {
+      "id": "q05",
+      "question": "대행사 승인 요청은 몇 초 기다리고 몇 번 다시 보내요?",
+      "expect_nodes": [
+        "sys-05",
+        "sys-03"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "보통",
+      "note": "키워드 누락",
+      "answer": "대행사 승인 요청은 5초를 기다립니다. 실패 시에는 1회만 다시 보냅니다.",
+      "citations": [
+        {
+          "session_number": 6,
+          "question_id": "sys-05",
+          "score": 0.6444
+        },
+        {
+          "session_number": 6,
+          "question_id": "sys-05-f1",
+          "score": 0.6413
+        },
+        {
+          "session_number": 3,
+          "question_id": "sys-03",
+          "score": 0.618
+        }
+      ]
+    },
+    {
+      "id": "q06",
+      "question": "매주 월요일마다 해야 하는 일이 있나요?",
+      "expect_nodes": [
+        "rou-01"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "매주 월요일 오전에는 지난주 미정산 거래 목록을 뽑아 정산 담당자에게 보내야 합니다. 이 작업은 관리자 화면의 미정산 조회 메뉴에서 기간을 지정해 내려받은 후, 공유 드라이브의 주간 정산 폴더에 업로드하는 방식으로 진행됩니다.",
+      "citations": [
+        {
+          "session_number": 1,
+          "question_id": "rou-01",
+          "score": 0.4374
+        },
+        {
+          "session_number": 2,
+          "question_id": "rou-02",
+          "score": 0.4162
+        },
+        {
+          "session_number": 3,
+          "question_id": "ppl-02-f1",
+          "score": 0.3974
+        }
+      ]
+    },
+    {
+      "id": "q07",
+      "question": "아침에 출근하면 뭐부터 확인하면 돼요?",
+      "expect_nodes": [
+        "rou-03"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "출근 시 결제 모니터링 대시보드에서 밤사이 승인 실패율과 새벽 정산 배치 결과를 먼저 확인해야 합니다. 또한 알림 채널에 쌓인 경고 사항을 빠르게 훑어봐야 합니다. 이를 통해 시스템의 정상 여부를 즉시 파악할 수 있습니다.",
+      "citations": [
+        {
+          "session_number": 4,
+          "question_id": "rou-03",
+          "score": 0.5904
+        },
+        {
+          "session_number": 6,
+          "question_id": "rou-05",
+          "score": 0.4289
+        },
+        {
+          "session_number": 4,
+          "question_id": "inc-03",
+          "score": 0.4166
+        }
+      ]
+    },
+    {
+      "id": "q08",
+      "question": "자동 환불이 실패한 건은 어떻게 처리해요?",
+      "expect_nodes": [
+        "rou-08"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "자동 환불 실패 건은 매일 오후 관리자 화면에서 수동으로 처리합니다. 실패 목록을 확인한 후 대행사 관리 화면에서 취소하고, 우리 쪽 상태를 환불 완료로 변경합니다.",
+      "citations": [
+        {
+          "session_number": 10,
+          "question_id": "rou-08",
+          "score": 0.7112
+        },
+        {
+          "session_number": 7,
+          "question_id": "inc-05",
+          "score": 0.5075
+        },
+        {
+          "session_number": 4,
+          "question_id": "rou-03-f1",
+          "score": 0.4965
+        }
+      ]
+    },
+    {
+      "id": "q09",
+      "question": "예전에 제일 오래 끌었던 장애가 뭐였어요?",
+      "expect_nodes": [
+        "inc-01"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "보통",
+      "note": "키워드 누락",
+      "answer": "제공된 근거에는 가장 오래 끌었던 장애의 구체적인 명칭이나 기간에 대한 정보가 없습니다. 따라서 질문에 답할 수 없습니다. NONE",
+      "citations": [
+        {
+          "session_number": 4,
+          "question_id": "inc-03-f1",
+          "score": 0.4459
+        },
+        {
+          "session_number": 1,
+          "question_id": "inc-01",
+          "score": 0.4371
+        },
+        {
+          "session_number": 9,
+          "question_id": "sys-07",
+          "score": 0.3929
+        }
+      ]
+    },
+    {
+      "id": "q10",
+      "question": "결제가 두 번 잡혔던 적이 있다던데 그 뒤로 어떻게 막았어요?",
+      "expect_nodes": [
+        "inc-04"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "중복 결제는 네트워크 지연으로 인한 재시도 과정에서 발생했으며, 정산 대사를 통해 발견하고 고객센터와 함께 취소 처리했습니다. 이후 주문 번호를 기준으로 중복 방지 키를 도입하여 해당 문제를 해결했습니다.",
+      "citations": [
+        {
+          "session_number": 5,
+          "question_id": "inc-04",
+          "score": 0.6208
+        },
+        {
+          "session_number": 9,
+          "question_id": "sys-07",
+          "score": 0.4749
+        },
+        {
+          "session_number": 10,
+          "question_id": "sys-08-f1",
+          "score": 0.455
+        }
+      ]
+    },
+    {
+      "id": "q11",
+      "question": "새벽에 오는 승인 지연 알림은 그냥 넘겨도 되나요?",
+      "expect_nodes": [
+        "inc-07"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "새벽 승인 지연 알림은 정산 배치로 인한 오탐일 가능성이 높으므로, 실패율이 정상이라면 무시해도 됩니다. 다만, 실제 실패율이 상승한 경우라면 진짜 문제이므로 반드시 확인해야 합니다. 출근 시에는 모니터링 대시보드와 알림 채널을 통해 밤사이 상황을 먼저 점검하시기 바랍니다.",
+      "citations": [
+        {
+          "session_number": 9,
+          "question_id": "inc-07",
+          "score": 0.7346
+        },
+        {
+          "session_number": 9,
+          "question_id": "inc-07-f1",
+          "score": 0.6232
+        },
+        {
+          "session_number": 4,
+          "question_id": "rou-03",
+          "score": 0.5405
+        }
+      ]
+    },
+    {
+      "id": "q12",
+      "question": "일하다 막히면 누구한테 물어보면 돼요?",
+      "expect_nodes": [
+        "ppl-01"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "일하다 막히면 결제팀 리드에게 먼저 문의해야 합니다. 팀 메신저의 결제 개발 채널에 질문을 올리고 리드를 언급하면 됩니다. 급한 경우 메신저 음성 통화를 사용할 수 있습니다.",
+      "citations": [
+        {
+          "session_number": 2,
+          "question_id": "ppl-01",
+          "score": 0.5893
+        },
+        {
+          "session_number": 7,
+          "question_id": "ppl-05-f1",
+          "score": 0.4237
+        },
+        {
+          "session_number": 6,
+          "question_id": "sys-05-f1",
+          "score": 0.357
+        }
+      ]
+    },
+    {
+      "id": "q13",
+      "question": "고객 문의는 어떤 경로로 개발팀까지 와요?",
+      "expect_nodes": [
+        "ppl-04"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "고객 문의는 고객센터 상담원이 먼저 접수한 후, 결제 오류인 경우 파트장이 티켓을 생성해 결제 개발 채널로 넘깁니다. 개발팀은 지정된 담당자가 하루 이내에 해당 티켓에 답변합니다.",
+      "citations": [
+        {
+          "session_number": 6,
+          "question_id": "ppl-04",
+          "score": 0.6656
+        },
+        {
+          "session_number": 2,
+          "question_id": "ppl-01",
+          "score": 0.5449
+        },
+        {
+          "session_number": 7,
+          "question_id": "ppl-05-f1",
+          "score": 0.4292
+        }
+      ]
+    },
+    {
+      "id": "q14",
+      "question": "DB 권한이 필요하면 어디에 신청해요?",
+      "expect_nodes": [
+        "ppl-05"
+      ],
+      "found": true,
+      "cited_ok": true,
+      "grade": "좋음",
+      "note": "",
+      "answer": "DB 권한 신청은 인프라팀 요청 게시판에 사유와 기간을 적어 제출해야 합니다.\n결제팀 리드의 승인을 받으면 인프라팀이 보통 하루 안에 권한을 열어 줍니다.\n급한 경우 장애 채널에서 인프라팀 당직자를 호출할 수 있으나, 이후 반드시 요청 게시판에 기록을 남기셔야 합니다.",
+      "citations": [
+        {
+          "session_number": 7,
+          "question_id": "ppl-05",
+          "score": 0.6606
+        },
+        {
+          "session_number": 7,
+          "question_id": "ppl-05-f1",
+          "score": 0.4951
+        },
+        {
+          "session_number": 10,
+          "question_id": "ppl-07",
+          "score": 0.4559
+        }
+      ]
+    },
+    {
+      "id": "q15",
+      "question": "월말 수수료 정산이 맞는지는 어떻게 검증해요?",
+      "expect_nodes": [],
+      "found": true,
+      "cited_ok": null,
+      "grade": "틀림",
+      "note": "지어낸 답",
+      "answer": "월말 사흘 동안은 배포를 피하여 정산 배치가 완료된 후 아침에 사람이 직접 결과를 확인합니다. 처리 건수와 실패 건수를 결과 화면에서 수동으로 검증하며, 실패 시 파일이 대행사로 전달되지 않습니다.",
+      "citations": [
+        {
+          "session_number": 1,
+          "question_id": "rou-01",
+          "score": 0.5189
+        },
+        {
+          "session_number": 2,
+          "question_id": "rou-02-f2",
+          "score": 0.5124
+        },
+        {
+          "session_number": 6,
+          "question_id": "rou-05",
+          "score": 0.5108
+        }
+      ]
+    },
+    {
+      "id": "q16",
+      "question": "정산 배치가 실패하면 손으로 어떻게 복구하나요?",
+      "expect_nodes": [],
+      "found": true,
+      "cited_ok": null,
+      "grade": "틀림",
+      "note": "지어낸 답",
+      "answer": "정산 배치 실패 시 혼자 다시 돌리지 말고 정산 담당자에게 먼저 알려야 합니다.\n또한 원인을 확인하기 전에 결제팀 리드에게 즉시 조치 요청을 해야 합니다.\n이후 정산 파일이 대행사로 전달되지 않았는지 결과 화면에서 직접 확인해야 합니다.",
+      "citations": [
+        {
+          "session_number": 6,
+          "question_id": "rou-05-f1",
+          "score": 0.6864
+        },
+        {
+          "session_number": 6,
+          "question_id": "rou-05",
+          "score": 0.6729
+        },
+        {
+          "session_number": 4,
+          "question_id": "rou-03-f1",
+          "score": 0.6151
+        }
+      ]
+    },
+    {
+      "id": "q17",
+      "question": "결제 대행사 쪽에 장애가 나면 누구한테 연락해요?",
+      "expect_nodes": [],
+      "found": true,
+      "cited_ok": null,
+      "grade": "틀림",
+      "note": "지어낸 답",
+      "answer": "결제 대행사 쪽에 장애가 발생하면 결제팀 리드에게 먼저 문의해야 합니다. 팀 메신저의 결제 개발 채널에 질문을 올리고 리드를 언급하면 보통 한 시간 안에 답을 받을 수 있습니다. 급한 경우라면 메신저 음성 통화를 사용하는 것이 좋습니다.",
+      "citations": [
+        {
+          "session_number": 2,
+          "question_id": "ppl-01",
+          "score": 0.6062
+        },
+        {
+          "session_number": 6,
+          "question_id": "sys-05-f1",
+          "score": 0.5722
+        },
+        {
+          "session_number": 7,
+          "question_id": "sys-06-f1",
+          "score": 0.5264
+        }
+      ]
+    },
+    {
+      "id": "q18",
+      "question": "사내 복지 포인트는 어디서 신청하나요?",
+      "expect_nodes": [],
+      "found": false,
+      "cited_ok": null,
+      "grade": "좋음",
+      "note": "지어내지 않음",
+      "answer": "이 주제는 인수인계에 없습니다. 팀장에게 확인하세요.",
+      "citations": []
+    },
+    {
+      "id": "q19",
+      "question": "사무실 주차 등록은 어떻게 해요?",
+      "expect_nodes": [],
+      "found": true,
+      "cited_ok": null,
+      "grade": "틀림",
+      "note": "지어낸 답",
+      "answer": "제공된 근거 자료에는 사무실 주차 등록 절차에 대한 정보가 포함되어 있지 않습니다. 따라서 해당 질문에 답변할 수 없습니다.",
+      "citations": [
+        {
+          "session_number": 3,
+          "question_id": "inc-02-f1",
+          "score": 0.2649
+        },
+        {
+          "session_number": 2,
+          "question_id": "sys-02",
+          "score": 0.2633
+        },
+        {
+          "session_number": 2,
+          "question_id": "ppl-01",
+          "score": 0.2542
+        }
+      ]
+    },
+    {
+      "id": "q20",
+      "question": "휴가 신청은 어떤 절차로 하나요?",
+      "expect_nodes": [],
+      "found": true,
+      "cited_ok": null,
+      "grade": "틀림",
+      "note": "지어낸 답",
+      "answer": "휴가 신청 절차에 대한 정보는 근거 자료에 포함되어 있지 않습니다. 제공된 문서는 결제 내역 추출, 장애 대응, 인프라 권한 요청 등의 업무 절차만 다루고 있습니다. 따라서 휴가 관련 내용은 확인할 수 없습니다.",
+      "citations": [
+        {
+          "session_number": 10,
+          "question_id": "ppl-07",
+          "score": 0.3795
+        },
+        {
+          "session_number": 7,
+          "question_id": "ppl-05-f1",
+          "score": 0.3698
+        },
+        {
+          "session_number": 7,
+          "question_id": "ppl-05",
+          "score": 0.3264
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "total": 20,
+    "covered": 14,
+    "answered": 19,
+    "cited_ok": 14,
+    "good": 13,
+    "fair": 2,
+    "wrong": 5,
+    "fabricated": 5,
+    "max_session_seconds": 5
+  },
+  "coverage": {
+    "leaver": "eval",
+    "role": "backend_developer",
+    "sessions_done": 10,
+    "sessions_planned": 10,
+    "items_total": 60,
+    "axes": [
+      {
+        "axis": "systems",
+        "label": "담당 시스템",
+        "covered": 8,
+        "total": 10
+      },
+      {
+        "axis": "routines",
+        "label": "반복 업무",
+        "covered": 8,
+        "total": 10
+      },
+      {
+        "axis": "incidents",
+        "label": "사고 이력",
+        "covered": 7,
+        "total": 10
+      },
+      {
+        "axis": "people",
+        "label": "관계자",
+        "covered": 7,
+        "total": 10
+      }
+    ],
+    "empty_topics": [
+      {
+        "question_id": "inc-08",
+        "axis": "incidents",
+        "label": "사고 이력",
+        "text": "외부 연동 쪽 변경 때문에 우리 서비스가 영향을 받은 적이 있나요?"
+      },
+      {
+        "question_id": "ppl-08",
+        "axis": "people",
+        "label": "관계자",
+        "text": "후임이 입사하면 첫 주에 꼭 인사하고 관계를 맺어 두어야 할 사람은 누구인가요? 역할로 알려 주세요."
+      },
+      {
+        "question_id": "sys-09",
+        "axis": "systems",
+        "label": "담당 시스템",
+        "text": "결제 상태가 어떤 단계를 거쳐 바뀌는지, 상태가 꼬였을 때 어디를 보면 되는지 알려 주세요."
+      },
+      {
+        "question_id": "rou-09",
+        "axis": "routines",
+        "label": "반복 업무",
+        "text": "월말 수수료 정산 결과를 검증하는 방법을 알려 주세요."
+      },
+      {
+        "question_id": "inc-09",
+        "axis": "incidents",
+        "label": "사고 이력",
+        "text": "정산 배치가 실패했을 때 수동으로 복구하는 절차는 무엇인가요?"
+      },
+      {
+        "question_id": "ppl-09",
+        "axis": "people",
+        "label": "관계자",
+        "text": "외부 결제 대행사에 장애가 나면 어떤 경로로 누구에게 연락하나요?"
+      },
+      {
+        "question_id": "sys-10",
+        "axis": "systems",
+        "label": "담당 시스템",
+        "text": "지금 진행 중이거나 미뤄 둔 개선 작업이 있나요? 후임이 이어받는다면 어디서부터 보면 되나요?"
+      },
+      {
+        "question_id": "rou-10",
+        "axis": "routines",
+        "label": "반복 업무",
+        "text": "당직이나 비상 대기는 어떻게 돌아가나요? 당직 때 꼭 챙기는 일은 무엇인가요?"
+      },
+      {
+        "question_id": "inc-10",
+        "axis": "incidents",
+        "label": "사고 이력",
+        "text": "장애가 끝난 뒤 회고나 보고서는 어떻게 남기나요? 지난 기록은 어디에 있나요?"
+      },
+      {
+        "question_id": "ppl-10",
+        "axis": "people",
+        "label": "관계자",
+        "text": "퇴사 후에도 후임이 막히면 물어볼 수 있는 사람이나 채널이 있나요? 어떤 주제를 누구에게 물으면 되나요?"
+      }
+    ]
+  }
+}
