@@ -1,0 +1,59 @@
+role: backend_developer
+title: 백엔드 개발자
+version: 1
+axes: [systems, routines, incidents, people]
+nodes:
+  - id: sys-01
+    axis: systems
+    text: "담당하는 시스템 중 배포가 가장 무서운 부분은 어디인가요? 왜요?"
+    follow_ups:
+      - id: sys-01-f1
+        text: "그 부분에서 문제가 났을 때 어떻게 복구했나요? 지금도 같은 방법이 통하나요?"
+      - id: sys-01-f2
+        text: "그 부분을 건드리기 전에 꼭 확인하는 설정값이나 지표가 있나요?"
+  - id: rou-01
+    axis: routines
+    text: "매주 또는 매달 손으로 직접 돌리는 작업이 있나요? 언제, 어떻게 하나요?"
+    follow_ups:
+      - id: rou-01-f1
+        text: "그 작업을 한 번 빼먹으면 무슨 일이 생기나요? 실제로 빼먹은 적이 있나요?"
+  - id: inc-01
+    axis: incidents
+    text: "지금까지 겪은 장애 중 가장 오래 걸린 건 무엇이었나요? 원인은 뭐였죠?"
+    follow_ups:
+      - id: inc-01-f1
+        text: "그때 가장 먼저 본 로그나 화면은 무엇이었나요?"
+      - id: inc-01-f2
+        text: "그 장애 이후에 바뀐 절차나 코드가 있나요? 아직 남은 숙제는요?"
+  - id: ppl-01
+    axis: people
+    text: "이 일을 하다 막히면 가장 먼저 누구에게 물어보나요? 어떤 경로로 연락하나요?"
+    follow_ups:
+      - id: ppl-01-f1
+        text: "그 사람이 자리에 없을 때는 어떻게 해결했나요?"
+  - id: sys-02
+    axis: systems
+    text: "문서에는 없지만 알고 있어야 하는 시스템 간 의존 관계가 있나요?"
+    follow_ups:
+      - id: sys-02-f1
+        text: "그 의존 관계가 끊기면 어떤 증상이 먼저 보이나요?"
+  - id: rou-02
+    axis: routines
+    text: "배포 전후로 늘 하는 확인 절차를 순서대로 말해 주세요."
+    follow_ups:
+      - id: rou-02-f1
+        text: "그 절차 중에 자동화하지 못하고 남아 있는 단계는 무엇이고, 이유는 뭔가요?"
+      - id: rou-02-f2
+        text: "금요일이나 월말처럼 배포를 피하는 시점이 있나요? 왜 그렇게 정했나요?"
+  - id: inc-02
+    axis: incidents
+    text: "언젠가 다시 터질 것 같아 불안한 부분이 있나요? 왜 그렇게 생각하나요?"
+    follow_ups:
+      - id: inc-02-f1
+        text: "그게 터지면 후임이 가장 먼저 해야 할 일은 무엇인가요?"
+  - id: ppl-02
+    axis: people
+    text: "외부 협력사나 다른 팀과 주고받는 일 중 후임이 꼭 이어받아야 하는 것은 무엇인가요?"
+    follow_ups:
+      - id: ppl-02-f1
+        text: "그 상대와 일할 때 알아 두면 좋은 요령이나 주의할 점이 있나요?"
