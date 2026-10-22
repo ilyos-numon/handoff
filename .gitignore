@@ -47,3 +47,6 @@ out/
 test-results/
 playwright-report/
 *.pyc
+
+# Handoff local KB store
+data/
