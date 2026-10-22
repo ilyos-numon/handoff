@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Handoff · 인수인계 세션</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="card session-header">
+      <div class="header-row">
+        <h1 class="brand">Handoff · <span id="session-number">세션 -/-</span></h1>
+        <span id="timer" class="timer">--:-- 남음</span>
+      </div>
+      <div class="axis-line">축: <span id="axis-label">-</span></div>
+      <p id="question-text" class="question-text"></p>
+    </header>
+
+    <div id="error" class="error hidden" role="alert"></div>
+
+    <section id="transcript" class="card transcript" aria-live="polite"></section>
+
+    <section class="card composer">
+      <textarea id="answer-input" rows="4" placeholder="답변 입력..." disabled></textarea>
+      <div class="button-row">
+        <button id="start-button" type="button" class="primary">세션 시작</button>
+        <button id="send-button" type="button" class="primary hidden" disabled>보내기</button>
+        <button id="end-button" type="button" class="secondary hidden" disabled>세션 종료</button>
+      </div>
+      <div class="counts">
+        <span id="items-today">오늘 쌓인 것: 0항목</span>
+        <span class="sep">·</span>
+        <span id="items-total">전체 0항목</span>
+      </div>
+    </section>
+
+    <section id="summary" class="card summary hidden">
+      <h2 id="summary-title">오늘은 여기까지</h2>
+      <ul id="summary-lines">
+        <li class="summary-line"></li>
+        <li class="summary-line"></li>
+        <li class="summary-line"></li>
+      </ul>
+    </section>
+  </main>
+  <script src="/static/session.js"></script>
+</body>
+</html>

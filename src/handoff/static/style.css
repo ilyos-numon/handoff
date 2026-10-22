@@ -1,0 +1,118 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  color: #1f2933;
+  background: #f4f6f8;
+}
+
+.page { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+h1, h2 { margin: 0; }
+h1 { font-size: 1.15rem; }
+h2 { font-size: 1.05rem; margin-bottom: 8px; }
+
+.hidden { display: none !important; }
+
+.card {
+  background: #ffffff;
+  border: 1px solid #dde3e9;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.header-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.timer { font-variant-numeric: tabular-nums; font-weight: 600; color: #3b5b7a; }
+.axis-line { margin-top: 6px; color: #52606d; font-size: 0.92rem; }
+.question-text { margin: 8px 0 0; font-weight: 600; }
+.question-text:empty { display: none; }
+
+.transcript { display: flex; flex-direction: column; gap: 8px; min-height: 120px; }
+.transcript:empty::before { content: "세션을 시작하면 질문이 여기에 표시됩니다."; color: #9aa5b1; }
+
+.msg {
+  max-width: 88%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.msg.bot { align-self: flex-start; background: #e8eef5; }
+.msg.user { align-self: flex-end; background: #2f6fab; color: #ffffff; }
+
+.error {
+  background: #fdecec;
+  border: 1px solid #f2b8b8;
+  color: #a12b2b;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+textarea, input[type="text"] {
+  width: 100%;
+  font: inherit;
+  padding: 10px;
+  border: 1px solid #c5ced8;
+  border-radius: 8px;
+  resize: vertical;
+}
+textarea:disabled, input:disabled { background: #eef1f4; }
+
+.button-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+button {
+  font: inherit;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #2f6fab;
+  cursor: pointer;
+}
+button.primary { background: #2f6fab; color: #ffffff; }
+button.secondary { background: #ffffff; color: #2f6fab; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.counts { margin-top: 10px; color: #52606d; font-size: 0.92rem; }
+.counts .sep { margin: 0 6px; }
+
+.summary ul { margin: 0; padding-left: 20px; }
+.summary-line { margin: 4px 0; }
+
+/* coverage report */
+.axis-row {
+  display: grid;
+  grid-template-columns: 7em 1fr 4em;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.axis-label { color: #323f4b; }
+.axis-bar { height: 12px; background: #e4e7eb; border-radius: 6px; overflow: hidden; }
+.axis-bar > span { display: block; height: 100%; background: #2f6fab; }
+.axis-count { text-align: right; font-variant-numeric: tabular-nums; }
+.lowest .axis-label { font-weight: 700; color: #a12b2b; }
+.lowest .axis-bar > span { background: #d9822b; }
+.lowest-mark { color: #a12b2b; font-size: 0.85rem; margin-left: 6px; white-space: nowrap; }
+
+/* successor chat */
+.bot-answer {
+  align-self: flex-start;
+  max-width: 92%;
+  background: #e8eef5;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.bot-answer .answer-text { white-space: pre-wrap; word-break: break-word; }
+.bot-answer.not-found { background: #fff6e5; border: 1px solid #f0d49a; }
+.citation { margin-top: 8px; padding: 6px 10px; border-left: 3px solid #2f6fab; background: #ffffff; border-radius: 4px; }
+.citation-meta { font-size: 0.82rem; color: #52606d; }
+.citation-excerpt { font-size: 0.92rem; white-space: pre-wrap; word-break: break-word; }
+
+@media (max-width: 480px) {
+  .page { padding: 10px; }
+  .axis-row { grid-template-columns: 5.5em 1fr 3.5em; gap: 6px; }
+  .msg, .bot-answer { max-width: 100%; }
+}
