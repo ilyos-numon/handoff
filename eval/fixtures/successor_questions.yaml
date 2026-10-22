@@ -1,0 +1,82 @@
+# 후임 개발자가 입사 첫 주에 물을 법한 질문. expect_nodes [] = 인수인계에 없음.
+questions:
+  - id: q01
+    text: "배포를 왜 금요일에는 안 하나요?"
+    expect_nodes: [rou-02]
+    keywords: ["금요일", "정산"]
+  - id: q02
+    text: "결제 쪽에서 배포할 때 제일 조심해야 하는 데가 어디예요?"
+    expect_nodes: [sys-01]
+    keywords: ["승인"]
+  - id: q03
+    text: "결제 완료 이벤트 필드를 바꾸면 어디가 영향을 받아요?"
+    expect_nodes: [sys-02]
+    keywords: ["주문 서비스"]
+  - id: q04
+    text: "운영 DB에서 결제 데이터 조회할 때 조심할 게 있나요?"
+    expect_nodes: [sys-04]
+    keywords: ["인덱스"]
+  - id: q05
+    text: "대행사 승인 요청은 몇 초 기다리고 몇 번 다시 보내요?"
+    expect_nodes: [sys-05, sys-03]
+    keywords: ["타임아웃", "재시도"]
+  - id: q06
+    text: "매주 월요일마다 해야 하는 일이 있나요?"
+    expect_nodes: [rou-01]
+    keywords: ["미정산"]
+  - id: q07
+    text: "아침에 출근하면 뭐부터 확인하면 돼요?"
+    expect_nodes: [rou-03]
+    keywords: ["대시보드"]
+  - id: q08
+    text: "자동 환불이 실패한 건은 어떻게 처리해요?"
+    expect_nodes: [rou-08]
+    keywords: ["환불"]
+  - id: q09
+    text: "예전에 제일 오래 끌었던 장애가 뭐였어요?"
+    expect_nodes: [inc-01]
+    keywords: ["커넥션"]
+  - id: q10
+    text: "결제가 두 번 잡혔던 적이 있다던데 그 뒤로 어떻게 막았어요?"
+    expect_nodes: [inc-04]
+    keywords: ["중복"]
+  - id: q11
+    text: "새벽에 오는 승인 지연 알림은 그냥 넘겨도 되나요?"
+    expect_nodes: [inc-07]
+    keywords: ["오탐"]
+  - id: q12
+    text: "일하다 막히면 누구한테 물어보면 돼요?"
+    expect_nodes: [ppl-01]
+    keywords: ["결제팀 리드"]
+  - id: q13
+    text: "고객 문의는 어떤 경로로 개발팀까지 와요?"
+    expect_nodes: [ppl-04]
+    keywords: ["고객센터"]
+  - id: q14
+    text: "DB 권한이 필요하면 어디에 신청해요?"
+    expect_nodes: [ppl-05]
+    keywords: ["인프라팀"]
+  - id: q15
+    text: "월말 수수료 정산이 맞는지는 어떻게 검증해요?"
+    expect_nodes: []
+    keywords: []
+  - id: q16
+    text: "정산 배치가 실패하면 손으로 어떻게 복구하나요?"
+    expect_nodes: []
+    keywords: []
+  - id: q17
+    text: "결제 대행사 쪽에 장애가 나면 누구한테 연락해요?"
+    expect_nodes: []
+    keywords: []
+  - id: q18
+    text: "사내 복지 포인트는 어디서 신청하나요?"
+    expect_nodes: []
+    keywords: []
+  - id: q19
+    text: "사무실 주차 등록은 어떻게 해요?"
+    expect_nodes: []
+    keywords: []
+  - id: q20
+    text: "휴가 신청은 어떤 절차로 하나요?"
+    expect_nodes: []
+    keywords: []
