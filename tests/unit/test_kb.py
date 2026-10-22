@@ -6,8 +6,14 @@ from pathlib import Path
 import pytest
 
 from handoff.config import Settings
-from handoff.kb import NOT_FOUND_MESSAGE, KBEntry, KnowledgeBase
-from handoff.providers import EMBED_DIM, FakeEmbedder, FakeLLM, build_providers
+from handoff.kb import (
+    COMPOSE_FAILED_MESSAGE,
+    NOT_FOUND_MESSAGE,
+    Citation,
+    KBEntry,
+    KnowledgeBase,
+)
+from handoff.providers import EMBED_DIM, FakeEmbedder, FakeLLM, ProviderError, build_providers
 
 ANSWER_MAIN = "금요일 배포는 피합니다. 작년 3월 금요일 저녁 배포 후 정산 배치가 주말 내내 실패했습니다."
 ANSWER_FOLLOW = "복구는 큐를 비우고 정산 배치를 수동으로 재실행했습니다."
@@ -161,3 +167,134 @@ def test_build_providers_unknown_raises() -> None:
     settings = Settings(provider="x", data_dir=Path("."), min_score=0.25, collection="c")
     with pytest.raises(ValueError, match="HANDOFF_PROVIDER"):
         build_providers(settings)
+
+
+class NoneComposeLLM(FakeLLM):
+    def compose_answer(self, question: str, citations: list[Citation]) -> str | None:
+        return None
+
+
+class FailingComposeLLM(FakeLLM):
+    def compose_answer(self, question: str, citations: list[Citation]) -> str | None:
+        raise ProviderError("compose failed")
+
+
+class FailingEmbedder(FakeEmbedder):
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        raise ProviderError("embed failed")
+
+
+class RecordingEmbedder(FakeEmbedder):
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls: list[list[str]] = []
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        self.calls.append(list(texts))
+        return super().embed(texts)
+
+
+class SmallEmbedder(FakeEmbedder):
+    def __init__(self) -> None:
+        super().__init__()
+        self.dim = 8
+
+
+def test_compose_none_downgrades_to_not_found(tmp_path: Path) -> None:
+    kb = KnowledgeBase(tmp_path / "qdrant", FakeEmbedder(), NoneComposeLLM(), MIN_SCORE)
+    try:
+        kb.add(_entries())
+        result = kb.query(QUERY_HIT)
+        assert result.found is False
+        assert result.answer == NOT_FOUND_MESSAGE
+        assert result.citations == []
+    finally:
+        kb.close()
+
+
+def test_compose_provider_error_keeps_citations(tmp_path: Path) -> None:
+    kb = KnowledgeBase(tmp_path / "qdrant", FakeEmbedder(), FailingComposeLLM(), MIN_SCORE)
+    try:
+        kb.add(_entries())
+        result = kb.query(QUERY_HIT)
+        assert result.found is True
+        assert result.answer == COMPOSE_FAILED_MESSAGE
+        assert result.citations
+        assert result.citations[0].question_id == "inc-01"
+    finally:
+        kb.close()
+
+
+def test_embed_provider_error_propagates_on_query(tmp_path: Path) -> None:
+    kb = KnowledgeBase(tmp_path / "qdrant", FailingEmbedder(), FakeLLM(), MIN_SCORE)
+    try:
+        with pytest.raises(ProviderError):
+            kb.query(QUERY_HIT)
+    finally:
+        kb.close()
+
+
+def test_embed_provider_error_propagates_on_add(tmp_path: Path) -> None:
+    kb = KnowledgeBase(tmp_path / "qdrant", FailingEmbedder(), FakeLLM(), MIN_SCORE)
+    try:
+        with pytest.raises(ProviderError):
+            kb.add(_entries())
+    finally:
+        kb.close()
+
+
+def test_dim_mismatch_raises(tmp_path: Path) -> None:
+    first = KnowledgeBase(tmp_path / "qdrant", FakeEmbedder(), FakeLLM(), MIN_SCORE, "c1")
+    first.close()
+    with pytest.raises(ValueError) as excinfo:
+        KnowledgeBase(tmp_path / "qdrant", SmallEmbedder(), FakeLLM(), MIN_SCORE, "c1")
+    assert str(excinfo.value) == "collection c1 has dim 1024, embedder dim is 8"
+
+
+def test_dim_match_reopens(tmp_path: Path) -> None:
+    first = KnowledgeBase(tmp_path / "qdrant", FakeEmbedder(), FakeLLM(), MIN_SCORE)
+    first.add(_entries())
+    first.close()
+    second = KnowledgeBase(tmp_path / "qdrant", FakeEmbedder(), FakeLLM(), MIN_SCORE)
+    try:
+        assert _count(second) == 2
+    finally:
+        second.close()
+
+
+def test_embed_input_answer_only_by_default(tmp_path: Path) -> None:
+    emb = RecordingEmbedder()
+    kb = KnowledgeBase(tmp_path / "qdrant", emb, FakeLLM(), MIN_SCORE)
+    try:
+        kb.add(_entries())
+        assert emb.calls[-1] == [ANSWER_MAIN, ANSWER_FOLLOW]
+    finally:
+        kb.close()
+
+
+def test_embed_with_question(tmp_path: Path) -> None:
+    emb = RecordingEmbedder()
+    kb = KnowledgeBase(
+        tmp_path / "qdrant", emb, FakeLLM(), MIN_SCORE, embed_with_question=True
+    )
+    try:
+        entries = _entries()
+        kb.add(entries)
+        assert emb.calls[-1] == [f"{e.question}\n{e.answer}" for e in entries]
+    finally:
+        kb.close()
+
+
+def test_citation_session_number_and_created_at(kb: KnowledgeBase) -> None:
+    entries = [e.model_copy(update={"session_number": 2}) for e in _entries()]
+    kb.add(entries)
+    result = kb.query(QUERY_HIT)
+    assert result.found is True
+    first = result.citations[0]
+    assert first.session_number == 2
+    assert first.created_at == datetime(2026, 10, 23, tzinfo=UTC)
+
+
+def test_citation_session_number_missing_is_none(loaded_kb: KnowledgeBase) -> None:
+    result = loaded_kb.query(QUERY_HIT)
+    assert result.citations[0].session_number is None
