@@ -26,9 +26,9 @@ def _raw() -> dict[str, Any]:
 def test_load_success(tree: QuestionTree) -> None:
     assert tree.role == "backend_developer"
     assert tree.title == "백엔드 개발자"
-    assert tree.version == 1
+    assert tree.version == 2
     assert set(tree.axes) == AXES
-    assert len(tree.nodes) >= 8
+    assert len(tree.nodes) == 40
 
 
 def test_axis_labels() -> None:
@@ -146,6 +146,7 @@ def test_bad_follow_up_id_format_rejected() -> None:
 
 def test_axis_with_one_node_rejected() -> None:
     data = _raw()
+    data["nodes"] = data["nodes"][:8]
     # replace the second people node (index 7) with a systems node; nodes[6] is incidents
     node = data["nodes"][7]
     node["axis"] = "systems"
@@ -153,3 +154,50 @@ def test_axis_with_one_node_rejected() -> None:
     node["follow_ups"] = [{"id": "sys-09-f1", "text": "x"}]
     with pytest.raises(ValueError):
         _build_tree(data)
+
+
+def test_ten_nodes_per_axis(tree: QuestionTree) -> None:
+    counts = Counter(n.axis for n in tree.nodes)
+    assert counts == {axis: 10 for axis in AXES}
+
+
+def test_node_order_and_ids(tree: QuestionTree) -> None:
+    order = ["systems", "routines", "incidents", "people"]
+    prefix = {"systems": "sys", "routines": "rou", "incidents": "inc", "people": "ppl"}
+    for i, node in enumerate(tree.nodes):
+        axis = order[i % 4]
+        assert node.axis == axis
+        assert node.id == f"{prefix[axis]}-{i // 4 + 1:02d}"
+
+
+def test_first_eight_ids(tree: QuestionTree) -> None:
+    assert [n.id for n in tree.nodes[:8]] == [
+        "sys-01",
+        "rou-01",
+        "inc-01",
+        "ppl-01",
+        "sys-02",
+        "rou-02",
+        "inc-02",
+        "ppl-02",
+    ]
+
+
+def test_follow_up_ids_match_node(tree: QuestionTree) -> None:
+    for node in tree.nodes:
+        assert 1 <= len(node.follow_ups) <= 2
+        for k, f in enumerate(node.follow_ups, start=1):
+            assert f.id == f"{node.id}-f{k}"
+
+
+@pytest.mark.parametrize(
+    ("node_id", "text"),
+    [
+        ("rou-09", "월말 수수료 정산 결과를 검증하는 방법을 알려 주세요."),
+        ("inc-09", "정산 배치가 실패했을 때 수동으로 복구하는 절차는 무엇인가요?"),
+        ("ppl-09", "외부 결제 대행사에 장애가 나면 어떤 경로로 누구에게 연락하나요?"),
+    ],
+)
+def test_fixed_uncovered_topics(tree: QuestionTree, node_id: str, text: str) -> None:
+    by_id = {n.id: n for n in tree.nodes}
+    assert by_id[node_id].text == text

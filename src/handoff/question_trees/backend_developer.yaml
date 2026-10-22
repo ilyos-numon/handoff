@@ -1,6 +1,6 @@
 role: backend_developer
 title: 백엔드 개발자
-version: 1
+version: 2
 axes: [systems, routines, incidents, people]
 nodes:
   - id: sys-01
@@ -57,3 +57,207 @@ nodes:
     follow_ups:
       - id: ppl-02-f1
         text: "그 상대와 일할 때 알아 두면 좋은 요령이나 주의할 점이 있나요?"
+  - id: sys-03
+    axis: systems
+    text: "운영 중인 서비스의 설정값 중 함부로 바꾸면 안 되는 것은 무엇인가요? 이유도 알려 주세요."
+    follow_ups:
+      - id: sys-03-f1
+        text: "그 설정값을 바꿔야 한다면 어떤 순서로, 누구 확인을 받아 바꾸나요?"
+  - id: rou-03
+    axis: routines
+    text: "매일 아침 출근해서 가장 먼저 확인하는 대시보드나 알림은 무엇인가요?"
+    follow_ups:
+      - id: rou-03-f1
+        text: "그 화면에서 어떤 숫자가 보이면 바로 조치를 시작하나요?"
+      - id: rou-03-f2
+        text: "확인을 건너뛰어도 되는 날이 있나요? 어떤 기준으로 판단하나요?"
+  - id: inc-03
+    axis: incidents
+    text: "장애 알림이 왔을 때 처음 10분 동안 하는 일을 순서대로 말해 주세요."
+    follow_ups:
+      - id: inc-03-f1
+        text: "그 순서 중 후임이 가장 놓치기 쉬운 단계는 무엇인가요?"
+  - id: ppl-03
+    axis: people
+    text: "배포나 설정 변경 전에 반드시 알리거나 승인을 받아야 하는 사람은 누구인가요? 역할로 알려 주세요."
+    follow_ups:
+      - id: ppl-03-f1
+        text: "알리지 않고 진행했다가 문제가 된 적이 있나요?"
+  - id: sys-04
+    axis: systems
+    text: "데이터베이스에서 특히 조심해야 하는 테이블이나 쿼리가 있나요?"
+    follow_ups:
+      - id: sys-04-f1
+        text: "그 테이블에 잘못된 쿼리가 나가면 어떤 일이 벌어지나요?"
+      - id: sys-04-f2
+        text: "데이터를 직접 고쳐야 할 때 따르는 절차가 있나요?"
+  - id: rou-04
+    axis: routines
+    text: "주기적으로 갱신해야 하는 인증서, 키, 계정 같은 것이 있나요? 만료 시점은 어떻게 챙기나요?"
+    follow_ups:
+      - id: rou-04-f1
+        text: "갱신을 놓치면 어떤 증상이 먼저 나타나나요?"
+  - id: inc-04
+    axis: incidents
+    text: "고객 결제가 중복으로 처리되거나 누락된 사례가 있었나요? 어떻게 발견하고 정리했나요?"
+    follow_ups:
+      - id: inc-04-f1
+        text: "그런 건을 다시 찾아낼 때 쓰는 쿼리나 도구가 있나요?"
+  - id: ppl-04
+    axis: people
+    text: "고객 문의가 개발팀까지 넘어오는 경로는 어떻게 되나요? 누가 먼저 받아서 넘겨 주나요?"
+    follow_ups:
+      - id: ppl-04-f1
+        text: "문의를 넘겨받을 때 꼭 함께 받아야 하는 정보는 무엇인가요?"
+  - id: sys-05
+    axis: systems
+    text: "외부 결제 대행사와 연동되는 부분은 어떻게 구성되어 있나요? 타임아웃이나 재시도 규칙도 알려 주세요."
+    follow_ups:
+      - id: sys-05-f1
+        text: "대행사 응답이 느려지면 우리 서비스에서는 어떤 증상이 먼저 보이나요?"
+      - id: sys-05-f2
+        text: "연동 설정을 바꿀 때 대행사 쪽에도 맞춰야 하는 값이 있나요?"
+  - id: rou-05
+    axis: routines
+    text: "매일 돌아가는 배치 작업 중 결과를 사람이 직접 확인해야 하는 것은 무엇인가요?"
+    follow_ups:
+      - id: rou-05-f1
+        text: "결과가 이상할 때 다시 돌려도 안전한가요, 아니면 먼저 정리할 것이 있나요?"
+  - id: inc-05
+    axis: incidents
+    text: "배포 후 롤백했던 경험이 있나요? 무엇이 문제였고 롤백은 어떻게 했나요?"
+    follow_ups:
+      - id: inc-05-f1
+        text: "롤백이 안 되는 변경도 있나요? 그런 변경은 어떻게 배포하나요?"
+  - id: ppl-05
+    axis: people
+    text: "인프라나 데이터베이스 권한이 필요할 때는 어느 팀에 어떻게 요청하나요?"
+    follow_ups:
+      - id: ppl-05-f1
+        text: "요청이 급할 때 쓰는 별도 경로가 있나요?"
+  - id: sys-06
+    axis: systems
+    text: "로그와 지표는 어디에서 보나요? 문제를 찾을 때 자주 쓰는 검색 조건이 있나요?"
+    follow_ups:
+      - id: sys-06-f1
+        text: "로그에 남지 않아서 원인 찾기가 어려운 부분이 있나요?"
+  - id: rou-06
+    axis: routines
+    text: "분기나 연말처럼 드물게 돌아오는 작업 중 꼭 기억해야 하는 것이 있나요?"
+    follow_ups:
+      - id: rou-06-f1
+        text: "그 작업을 준비하려면 며칠 전부터 무엇을 해야 하나요?"
+      - id: rou-06-f2
+        text: "지난번에 그 작업을 할 때 기록해 둔 메모나 문서가 있나요?"
+  - id: inc-06
+    axis: incidents
+    text: "트래픽이 갑자기 늘어서 문제가 됐던 적이 있나요? 그때 어떻게 버텼나요?"
+    follow_ups:
+      - id: inc-06-f1
+        text: "그 이후 미리 늘려 두거나 바꿔 둔 설정이 있나요?"
+  - id: ppl-06
+    axis: people
+    text: "보안이나 개인정보 관련 검토가 필요할 때는 누구와 이야기하나요?"
+    follow_ups:
+      - id: ppl-06-f1
+        text: "검토에 보통 얼마나 걸리고, 미리 준비할 자료는 무엇인가요?"
+  - id: sys-07
+    axis: systems
+    text: "코드 중에 손대기 꺼려지는 오래된 부분이 있나요? 왜 그대로 두었나요?"
+    follow_ups:
+      - id: sys-07-f1
+        text: "그 부분을 고쳐야 한다면 어떤 테스트부터 확인해야 하나요?"
+  - id: rou-07
+    axis: routines
+    text: "코드 리뷰나 배포 승인은 어떤 규칙으로 진행하나요?"
+    follow_ups:
+      - id: rou-07-f1
+        text: "급한 수정일 때 그 규칙을 건너뛰는 예외 절차가 있나요?"
+  - id: inc-07
+    axis: incidents
+    text: "모니터링 알림이 울렸지만 실제 문제는 아니었던 경우가 자주 있나요? 어떤 알림인가요?"
+    follow_ups:
+      - id: inc-07-f1
+        text: "진짜 문제인지 아닌지 구분하는 요령이 있나요?"
+  - id: ppl-07
+    axis: people
+    text: "기획이나 운영 쪽에서 자주 들어오는 요청은 무엇이고, 보통 누가 요청하나요?"
+    follow_ups:
+      - id: ppl-07-f1
+        text: "그 요청 중 거절하거나 조정해야 했던 것이 있나요?"
+  - id: sys-08
+    axis: systems
+    text: "테스트 환경과 운영 환경이 다르게 동작하는 부분이 있나요?"
+    follow_ups:
+      - id: sys-08-f1
+        text: "그 차이 때문에 운영에서만 드러난 문제가 있었나요?"
+  - id: rou-08
+    axis: routines
+    text: "환불이나 결제 취소를 수작업으로 처리해야 하는 경우가 있나요? 어떻게 처리하나요?"
+    follow_ups:
+      - id: rou-08-f1
+        text: "처리한 내역은 어디에 기록하고 누구에게 공유하나요?"
+  - id: inc-08
+    axis: incidents
+    text: "외부 연동 쪽 변경 때문에 우리 서비스가 영향을 받은 적이 있나요?"
+    follow_ups:
+      - id: inc-08-f1
+        text: "그런 변경을 미리 알 수 있는 방법이 있나요?"
+  - id: ppl-08
+    axis: people
+    text: "후임이 입사하면 첫 주에 꼭 인사하고 관계를 맺어 두어야 할 사람은 누구인가요? 역할로 알려 주세요."
+    follow_ups:
+      - id: ppl-08-f1
+        text: "그 사람과 처음 일할 때 알아 두면 좋은 점이 있나요?"
+  - id: sys-09
+    axis: systems
+    text: "결제 상태가 어떤 단계를 거쳐 바뀌는지, 상태가 꼬였을 때 어디를 보면 되는지 알려 주세요."
+    follow_ups:
+      - id: sys-09-f1
+        text: "상태가 중간에 멈춘 건은 어떻게 찾아서 정리하나요?"
+  - id: rou-09
+    axis: routines
+    text: "월말 수수료 정산 결과를 검증하는 방법을 알려 주세요."
+    follow_ups:
+      - id: rou-09-f1
+        text: "정산 금액이 맞지 않을 때 가장 먼저 대조하는 자료는 무엇인가요?"
+      - id: rou-09-f2
+        text: "검증 결과는 누구에게, 언제까지 공유해야 하나요?"
+  - id: inc-09
+    axis: incidents
+    text: "정산 배치가 실패했을 때 수동으로 복구하는 절차는 무엇인가요?"
+    follow_ups:
+      - id: inc-09-f1
+        text: "복구 중에 다시 실행하면 안 되는 단계나 주의할 점이 있나요?"
+      - id: inc-09-f2
+        text: "복구가 끝났는지 어떻게 확인하나요?"
+  - id: ppl-09
+    axis: people
+    text: "외부 결제 대행사에 장애가 나면 어떤 경로로 누구에게 연락하나요?"
+    follow_ups:
+      - id: ppl-09-f1
+        text: "연락이 닿지 않을 때 쓰는 비상 경로가 있나요?"
+  - id: sys-10
+    axis: systems
+    text: "지금 진행 중이거나 미뤄 둔 개선 작업이 있나요? 후임이 이어받는다면 어디서부터 보면 되나요?"
+    follow_ups:
+      - id: sys-10-f1
+        text: "그 작업을 미룬 이유와 지금 남아 있는 위험은 무엇인가요?"
+  - id: rou-10
+    axis: routines
+    text: "당직이나 비상 대기는 어떻게 돌아가나요? 당직 때 꼭 챙기는 일은 무엇인가요?"
+    follow_ups:
+      - id: rou-10-f1
+        text: "당직 중에 혼자 판단하기 어려운 일이 생기면 어떻게 하나요?"
+  - id: inc-10
+    axis: incidents
+    text: "장애가 끝난 뒤 회고나 보고서는 어떻게 남기나요? 지난 기록은 어디에 있나요?"
+    follow_ups:
+      - id: inc-10-f1
+        text: "회고에서 나온 후속 조치 중 아직 끝나지 않은 것이 있나요?"
+  - id: ppl-10
+    axis: people
+    text: "퇴사 후에도 후임이 막히면 물어볼 수 있는 사람이나 채널이 있나요? 어떤 주제를 누구에게 물으면 되나요?"
+    follow_ups:
+      - id: ppl-10-f1
+        text: "그 사람에게 물을 때 미리 정리해 가면 좋은 정보는 무엇인가요?"
