@@ -133,6 +133,27 @@ def test_compose_none_returns_none(content: str) -> None:
     assert _llm(handler).compose_answer("PG사?", [_citation()]) is None
 
 
+@pytest.mark.parametrize(
+    "content",
+    [
+        "제공된 근거에는 해당 정보가 없습니다. 따라서 질문에 답할 수 없습니다. NONE",
+        "근거가 부족합니다.\nNONE",
+        "제공된 근거 자료에는 사무실 주차 등록 절차에 대한 정보가 포함되어 있지 않습니다.",
+        "휴가 신청 절차는 근거에서 확인할 수 없습니다.",
+        "해당 질문에 답변할 수 없습니다.",
+    ],
+)
+def test_compose_trailing_none_and_refusals_return_none(content: str) -> None:
+    handler, _ = _recording([_chat_response(content)])
+    assert _llm(handler).compose_answer("주차?", [_citation()]) is None
+
+
+def test_compose_grounded_answer_with_none_like_words_kept() -> None:
+    text = "결제 승인 모듈 배포가 가장 위험합니다. NONEXISTENT 설정은 건드리지 않습니다."
+    handler, _ = _recording([_chat_response(text)])
+    assert _llm(handler).compose_answer("무서운 배포?", [_citation()]) == text
+
+
 def test_compose_provider_error_propagates() -> None:
     handler, _ = _recording([httpx.Response(401, json={})])
     with pytest.raises(ProviderError):

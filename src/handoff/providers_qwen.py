@@ -36,7 +36,23 @@ COMPOSE_SYSTEM = (
     "1. 근거 발췌에 있는 내용만 씁니다.\n"
     "2. 근거에 없는 날짜·숫자·사람·조직·절차를 더하지 않습니다.\n"
     "3. 근거가 질문에 답하지 못하면 정확히 NONE 만 출력합니다.\n"
-    "4. 한국어 3문장 이내로 답합니다."
+    "4. 한국어 3문장 이내로 답합니다.\n"
+    "5. 근거가 질문이 묻는 바로 그 대상과 그 종류의 정보(절차·연락처·검증 방법·숫자 등)를 "
+    "직접 적고 있을 때만 답합니다. 근거가 관련 주제를 다룰 뿐 그 정보를 직접 적고 있지 않으면 "
+    "NONE 만 출력합니다.\n"
+    "6. 답할 수 없을 때 이유나 거절 문장을 쓰지 않고 NONE 한 단어만 출력합니다. "
+    "답할 때는 답변 문장만 출력하고 NONE 을 붙이지 않습니다."
+)
+
+# compose 출력이 아래 중 하나면 답이 없는 것(None)으로 본다:
+# 빈 출력, 독립된 토큰 NONE(위치 무관), 서술형 거절 문구.
+COMPOSE_NONE_TOKEN = re.compile(r"(?<![A-Za-z0-9_])NONE(?![A-Za-z0-9_])")
+COMPOSE_REFUSAL_PHRASES = (
+    "답할 수 없",
+    "답변할 수 없",
+    "정보가 없",
+    "포함되어 있지 않",
+    "확인할 수 없",
 )
 
 SUMMARIZE_SYSTEM = (
@@ -46,6 +62,12 @@ SUMMARIZE_SYSTEM = (
 )
 
 _LINE_PREFIX = re.compile(r"^(?:[-•*·]+|\d+[.)])\s*")
+
+
+def _is_no_answer(out: str) -> bool:
+    if not out or COMPOSE_NONE_TOKEN.search(out):
+        return True
+    return any(phrase in out for phrase in COMPOSE_REFUSAL_PHRASES)
 
 
 def _retryable_status(code: int) -> bool:
@@ -170,7 +192,7 @@ class QwenLLM:
         )
         user = f"질문: {question}\n{evidence}"
         out = self._chat(COMPOSE_SYSTEM, user, 300).strip()
-        if not out or out.startswith("NONE"):
+        if _is_no_answer(out):
             return None
         return out
 
