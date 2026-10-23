@@ -113,7 +113,9 @@ def test_constant_tables_cover_literals() -> None:
     assert set(SLOT_CUES) == set(SLOTS)
     assert set(SLOT_FOLLOW_UP_TEMPLATES) == set(SLOTS)
     assert set(SLOT_TARGET_CUES) == set(SLOTS)
-    assert QUEUE_PRIORITY == {"successor": 0, "gap": 1, "premortem": 2, "generated": 3}
+    assert QUEUE_PRIORITY == {
+        "manager": 0, "successor": 1, "gap": 2, "premortem": 3, "generated": 4
+    }
     assert set(ENTITY_TYPE_AXIS) == {"system", "job", "incident", "role", "document", "external"}
     assert set(CARD_TYPE_AXIS) == {"procedure", "pitfall", "decision", "contact", "entity"}
     assert set(ARTIFACT_CARD_TYPES) == set(ARTIFACT_TITLES)
@@ -261,3 +263,17 @@ def test_honesty_models_defaults_and_validation() -> None:
     draft = c.FenceDraft()
     assert draft.reasons == [] and draft.risks == []
     assert c.TacitFollowUpResponse(cues=[], text=None).text is None
+
+
+def test_manager_reason_and_priority_question_request() -> None:
+    assert c.MANAGER_REASON == "팀장 우선 질문"
+    req = c.PriorityQuestionRequest.model_validate({"text": "  배포 승인은 누가 하나요?  "})
+    assert req.text == "배포 승인은 누가 하나요?"
+    assert req.axis is None
+    assert req.role == c.DEFAULT_ROLE
+    with_axis = c.PriorityQuestionRequest.model_validate(
+        {"text": "x", "axis": "people", "role": "r"})
+    assert (with_axis.axis, with_axis.role) == ("people", "r")
+    for bad in ({"text": "   "}, {"text": "a" * 301}, {"text": "x", "axis": "nope"}):
+        with pytest.raises(ValidationError):
+            c.PriorityQuestionRequest.model_validate(bad)

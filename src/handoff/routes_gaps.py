@@ -4,18 +4,22 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response, status
 
 from handoff.contracts import (
     DEFAULT_ROLE,
+    MANAGER_REASON,
     PROVIDER_UNAVAILABLE,
     GapReport,
+    PriorityQuestionRequest,
     QueueItem,
     QueueSource,
     QueueStatus,
 )
-from handoff.gaps import GapService
+from handoff.gaps import GapService, utc_now
+from handoff.knowledge_store import KnowledgeStore
 from handoff.providers import ProviderError
+from handoff.verify import guess_axis
 
 LEAVER_PATH = r"^[a-z0-9_-]{1,40}$"
 
@@ -27,7 +31,13 @@ def get_gaps(request: Request) -> GapService:
     return service
 
 
+def get_store(request: Request) -> KnowledgeStore:
+    store: KnowledgeStore = request.app.state.knowledge.store
+    return store
+
+
 GapsDep = Annotated[GapService, Depends(get_gaps)]
+StoreDep = Annotated[KnowledgeStore, Depends(get_store)]
 LeaverPath = Annotated[str, Path(pattern=LEAVER_PATH)]
 
 
@@ -54,3 +64,26 @@ def list_queue(
     source: QueueSource | None = None,
 ) -> list[QueueItem]:
     return gaps.queue(leaver, status_, source)
+
+
+@router.post(
+    "/leavers/{leaver}/priority-questions",
+    response_model=QueueItem,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_priority_question(
+    leaver: LeaverPath, body: PriorityQuestionRequest, store: StoreDep, response: Response
+) -> QueueItem:
+    item, created = store.enqueue(
+        leaver,
+        body.role,
+        "manager",
+        body.axis or guess_axis(body.text),
+        body.text,
+        MANAGER_REASON,
+        None,
+        utc_now(),
+    )
+    if not created:
+        response.status_code = status.HTTP_200_OK
+    return item

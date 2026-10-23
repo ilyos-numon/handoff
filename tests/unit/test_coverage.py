@@ -102,3 +102,36 @@ def test_empty_topics_in_tree_order() -> None:
     report = build_coverage(tree, "alice", [], [_answer("inc-01", "incidents")], 3)
     expected = [n.id for n in tree.nodes if n.id != "inc-01"]
     assert [t.question_id for t in report.empty_topics] == expected
+
+
+def test_queue_answers_count_as_queued_answered_not_covered() -> None:
+    tree = load_tree("backend_developer")
+    answers = [_answer("q3", "people"), _answer("q7", "systems")]
+    report = build_coverage(tree, "alice", [], answers, 3)
+    assert [a.covered for a in report.axes] == [0, 0, 0, 0]
+    assert [a.queued_answered for a in report.axes] == [1, 0, 0, 1]
+    assert len(report.empty_topics) == 40
+    assert report.items_total == 2
+
+
+def test_tree_answers_do_not_count_as_queued_answered() -> None:
+    tree = load_tree("backend_developer")
+    answers = [_answer("sys-01"), _answer("sys-01-f1"), _answer("rou-02-g1", "routines")]
+    report = build_coverage(tree, "alice", [], answers, 3)
+    assert [a.queued_answered for a in report.axes] == [0, 0, 0, 0]
+    assert report.axes[0].covered == 1
+
+
+def test_queue_follow_ups_of_same_topic_count_once() -> None:
+    tree = load_tree("backend_developer")
+    answers = [_answer("q12", "routines"), _answer("q12-f1", "routines"),
+               _answer("q12-g2", "routines"), _answer("q13", "routines")]
+    report = build_coverage(tree, "alice", [], answers, 3)
+    assert report.axes[1].queued_answered == 2
+    assert report.axes[1].covered == 0
+
+
+def test_queued_answered_defaults_to_zero() -> None:
+    from handoff.coverage import AxisCoverage
+
+    assert AxisCoverage(axis="systems", label="x", covered=0, total=1).queued_answered == 0

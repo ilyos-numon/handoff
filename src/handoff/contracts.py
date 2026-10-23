@@ -23,7 +23,7 @@ SlotState = Literal["filled", "missing", "not_applicable"]
 SourceKind = Literal["wiki", "runbook", "cron", "incident", "commit", "org"]
 EntityType = Literal["system", "job", "incident", "role", "document", "external"]
 CardType = Literal["procedure", "pitfall", "decision", "contact", "entity"]
-QueueSource = Literal["successor", "gap", "premortem", "generated"]
+QueueSource = Literal["successor", "gap", "premortem", "generated", "manager"]
 QueueStatus = Literal["pending", "asked", "answered"]
 GapKind = Literal["mentioned_only", "contradiction", "bus_factor"]
 Risk = Literal["high", "medium", "low"]
@@ -34,7 +34,13 @@ ChangeEvent = Literal[
 ]
 RouteBasis = Literal["contact_card", "people_answer"]
 
-QUEUE_PRIORITY: dict[QueueSource, int] = {"successor": 0, "gap": 1, "premortem": 2, "generated": 3}
+QUEUE_PRIORITY: dict[QueueSource, int] = {
+    "manager": 0,
+    "successor": 1,
+    "gap": 2,
+    "premortem": 3,
+    "generated": 4,
+}
 ENTITY_TYPE_AXIS: dict[EntityType, Axis] = {
     "system": "systems",
     "document": "systems",
@@ -66,6 +72,7 @@ ARTIFACT_TITLES: dict[ArtifactKind, str] = {
 }
 FAKE_COMPOSE_PREFIX = "인수인계 기록에 따르면:"  # FakeLLM.compose_answer 출력 접두어와 같다
 DEFAULT_ROLE = "backend_developer"
+MANAGER_REASON = "팀장 우선 질문"
 
 # 조직 변화 이벤트 (호출자가 지정, 자동 감지 없음)
 CHANGE_EVENTS: tuple[ChangeEvent, ...] = (
@@ -220,6 +227,12 @@ class QueueItem(BaseModel):
     asked_session_id: str | None = None
     answered_session_id: str | None = None
     created_at: datetime
+
+
+class PriorityQuestionRequest(BaseModel):
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
+    axis: Axis | None = None
+    role: str = DEFAULT_ROLE
 
 
 class GenerateQuestionsResponse(BaseModel):

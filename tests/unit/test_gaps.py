@@ -308,9 +308,9 @@ def test_qwen_find_contradictions_single_session_skips_call() -> None:
 
 
 # ---- 라우터
-def _client(service: Any) -> TestClient:
+def _client(service: Any, store: Any = None) -> TestClient:
     app = FastAPI()
-    app.state.knowledge = SimpleNamespace(gaps=service)
+    app.state.knowledge = SimpleNamespace(gaps=service, store=store)
     app.include_router(router)
     return TestClient(app)
 
@@ -461,3 +461,76 @@ def test_routes_unknown_areas_have_no_person_keys(ks: KnowledgeStore, sessions: 
     forbidden = {"score", "person", "owner", "rank", "grade"}
     assert not _all_keys(body) & forbidden
     assert not _all_keys(got) & forbidden
+
+
+# ---- 팀장 우선 질문
+def _priority_client(ks: KnowledgeStore, sessions: SessionStore) -> TestClient:
+    return _client(_service(ks, sessions), ks)
+
+
+def test_priority_question_created_201_with_manager_source(
+        ks: KnowledgeStore, sessions: SessionStore) -> None:
+    client = _priority_client(ks, sessions)
+    r = client.post(f"/leavers/{LEAVER}/priority-questions",
+                    json={"text": "  배포 승인은 누가 하나요?  ", "axis": "people"})
+    assert r.status_code == 201
+    body = r.json()
+    assert body["source"] == "manager"
+    assert body["reason"] == "팀장 우선 질문"
+    assert body["text"] == "배포 승인은 누가 하나요?"
+    assert body["axis"] == "people"
+    assert body["role"] == ROLE
+    assert body["status"] == "pending"
+    assert body["leaver"] == LEAVER
+    assert body["ref_id"] is None
+    assert [q.id for q in ks.list_queue(LEAVER, source="manager")] == [body["id"]]
+
+
+def test_priority_question_duplicate_returns_existing_200(
+        ks: KnowledgeStore, sessions: SessionStore) -> None:
+    client = _priority_client(ks, sessions)
+    first = client.post(f"/leavers/{LEAVER}/priority-questions", json={"text": "같은 질문"})
+    again = client.post(f"/leavers/{LEAVER}/priority-questions", json={"text": "같은 질문"})
+    assert first.status_code == 201
+    assert again.status_code == 200
+    assert again.json()["id"] == first.json()["id"]
+    assert len(ks.list_queue(LEAVER)) == 1
+
+
+def test_priority_question_validation_422(ks: KnowledgeStore, sessions: SessionStore) -> None:
+    client = _priority_client(ks, sessions)
+    assert client.post(f"/leavers/{LEAVER}/priority-questions",
+                       json={"text": "   "}).status_code == 422
+    assert client.post(f"/leavers/{LEAVER}/priority-questions", json={}).status_code == 422
+    assert client.post(f"/leavers/{LEAVER}/priority-questions",
+                       json={"text": "x", "axis": "nope"}).status_code == 422
+    assert client.post("/leavers/BAD/priority-questions",
+                       json={"text": "x"}).status_code == 422
+    assert ks.list_queue(LEAVER) == []
+
+
+def test_priority_question_without_axis_uses_guess_axis(
+        ks: KnowledgeStore, sessions: SessionStore) -> None:
+    from handoff.verify import guess_axis
+
+    client = _priority_client(ks, sessions)
+    texts = ["장애가 나면 누구에게 연락하나요?", "배치 작업은 매일 언제 돌아가나요?", "아무 말"]
+    for text in texts:
+        r = client.post(f"/leavers/{LEAVER}/priority-questions",
+                        json={"text": text, "role": "frontend_developer"})
+        assert r.status_code == 201
+        assert r.json()["axis"] == guess_axis(text)
+        assert r.json()["role"] == "frontend_developer"
+
+
+def test_next_pending_returns_manager_before_successor(
+        ks: KnowledgeStore, sessions: SessionStore) -> None:
+    ks.enqueue(LEAVER, ROLE, "successor", "systems", "후임 질문", "후임", None, T0)
+    ks.enqueue(LEAVER, ROLE, "gap", "systems", "구멍 질문", "구멍", None, T0)
+    r = _priority_client(ks, sessions).post(f"/leavers/{LEAVER}/priority-questions",
+                                            json={"text": "팀장 질문"})
+    nxt = ks.next_pending(LEAVER, ROLE)
+    assert nxt is not None and nxt.id == r.json()["id"] and nxt.source == "manager"
+    ks.mark_asked(nxt.id, "sess")
+    nxt = ks.next_pending(LEAVER, ROLE)
+    assert nxt is not None and nxt.source == "successor"

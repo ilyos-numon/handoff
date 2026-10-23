@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel
 
+from handoff.contracts import is_queue_id, topic_id
 from handoff.kb import KBEntry
 from handoff.question_tree import AXIS_LABELS, Axis, QuestionTree
 from handoff.store import SessionRow
@@ -14,6 +15,7 @@ class AxisCoverage(BaseModel):
     label: str
     covered: int
     total: int
+    queued_answered: int = 0
 
 
 class EmptyTopic(BaseModel):
@@ -52,8 +54,16 @@ def build_coverage(tree: QuestionTree, leaver: str, sessions: list[SessionRow],
         else:
             empty.append(EmptyTopic(question_id=node.id, axis=node.axis,
                                     label=AXIS_LABELS[node.axis], text=node.text))
+    queue_topic_axis: dict[str, Axis] = {}
+    for a in answers:
+        if is_queue_id(a.question_id):
+            queue_topic_axis.setdefault(topic_id(a.question_id), a.axis)
+    queued: dict[str, int] = {axis: 0 for axis in _AXIS_ORDER}
+    for axis in queue_topic_axis.values():
+        queued[axis] += 1
     axes = [AxisCoverage(axis=axis, label=AXIS_LABELS[axis], covered=covered[axis],
-                         total=totals[axis]) for axis in _AXIS_ORDER]
+                         total=totals[axis], queued_answered=queued[axis])
+            for axis in _AXIS_ORDER]
     return CoverageReport(
         leaver=leaver,
         role=tree.role,
