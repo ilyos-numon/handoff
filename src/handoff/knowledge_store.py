@@ -6,6 +6,7 @@ import json
 import re
 import sqlite3
 import threading
+from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -87,7 +88,16 @@ _GAP_COLS = (
 _ARTIFACT_COLS = "id, leaver, kind, title, sections_json, markdown, card_ids_json, generated_at"
 _DRILL_COLS = "id, leaver, title, situation, ask, expected_json, card_ids_json, created_at"
 
+_LEAVER_TABLES = ("k_sources", "k_entities", "k_queue", "k_cards", "k_gaps", "k_artifacts", "k_drills")
+
 Row = tuple[object, ...]
+
+
+@dataclass(frozen=True)
+class PurgeCounts:
+    sessions: int
+    answers: int
+    knowledge_rows: int
 
 
 def _parse_id(prefix: str, external_id: str) -> int | None:
@@ -482,3 +492,27 @@ class KnowledgeStore:
                 f"SELECT {_DRILL_COLS} FROM k_drills WHERE id = ?", (n,)
             ).fetchone()
         return _drill_from(row) if row is not None else None
+
+    # ---- 퇴사자 단위 삭제 (세션 테이블은 공유 연결이라 함께 지운다)
+    def purge_leaver(self, leaver: str) -> PurgeCounts:
+        session_sql = "SELECT session_id FROM sessions WHERE leaver = ?"
+        with self._lock:
+            try:
+                answers = self._conn.execute(
+                    f"DELETE FROM answers WHERE session_id IN ({session_sql})", (leaver,)
+                ).rowcount
+                knowledge_rows = self._conn.execute(
+                    f"DELETE FROM k_depth WHERE session_id IN ({session_sql})", (leaver,)
+                ).rowcount
+                for table in _LEAVER_TABLES:
+                    knowledge_rows += self._conn.execute(
+                        f"DELETE FROM {table} WHERE leaver = ?", (leaver,)
+                    ).rowcount
+                sessions = self._conn.execute(
+                    "DELETE FROM sessions WHERE leaver = ?", (leaver,)
+                ).rowcount
+                self._conn.commit()
+            except Exception:
+                self._conn.rollback()
+                raise
+        return PurgeCounts(sessions=sessions, answers=answers, knowledge_rows=knowledge_rows)

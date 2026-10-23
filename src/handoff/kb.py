@@ -11,6 +11,7 @@ from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
+    FilterSelector,
     MatchValue,
     PointStruct,
     VectorParams,
@@ -168,6 +169,14 @@ class KnowledgeBase:
             )
         return KBAnswer(
             found=True, answer=scrub_contacts(kept), citations=citations, claims_removed=removed
+        )
+
+    def purge_leaver(self, leaver: str) -> None:
+        self._client.delete(
+            collection_name=self._collection,
+            points_selector=FilterSelector(
+                filter=Filter(must=[FieldCondition(key="leaver", match=MatchValue(value=leaver))])
+            ),
         )
 
     def close(self) -> None:
