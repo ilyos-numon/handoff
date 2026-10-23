@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from handoff.kb import KnowledgeBase
+from handoff.contracts import QueueItem, QueueSource
+from handoff.kb import KBEntry, KnowledgeBase
 from handoff.providers import SUMMARY_EMPTY, FakeEmbedder, FakeLLM, ProviderError
 from handoff.question_tree import FollowUp, UnknownRoleError, load_tree
 from handoff.session import (
@@ -467,3 +468,77 @@ def test_coverage_counts_ended_sessions_only(svc: SessionService) -> None:
 def test_coverage_unknown_role_raises(svc: SessionService) -> None:
     with pytest.raises(UnknownRoleError):
         svc.coverage(DEFAULT_LEAVER, "unknown_role")
+
+
+QUEUE_REASON = "팀장 우선 질문"
+
+
+class StubHooks:
+    """Serves queued items in order; never adds follow-ups."""
+
+    def __init__(self, items: list[QueueItem]) -> None:
+        self.items = list(items)
+
+    def next_queued(self, session_id: str, leaver: str, role: str) -> QueueItem | None:
+        return self.items.pop(0) if self.items else None
+
+    def after_answer(
+        self, session_id: str, answered: Question, text: str, candidates: list[FollowUp]
+    ) -> Question | None:
+        return None
+
+    def on_end(self, session_id: str, leaver: str, role: str, answers: list[KBEntry]) -> None:
+        return None
+
+
+def _queue_item(item_id: str, source: QueueSource, reason: str) -> QueueItem:
+    return QueueItem(
+        id=item_id,
+        leaver="kim",
+        role=ROLE,
+        source=source,
+        axis="incidents",
+        text=f"{item_id} 질문은?",
+        reason=reason,
+        status="pending",
+        created_at=FIXED_NOW,
+    )
+
+
+def test_tree_question_has_no_source_or_reason(service: SessionService) -> None:
+    _, first = service.start(ROLE)
+    assert first.kind == "main"
+    assert first.source is None
+    assert first.reason is None
+
+
+def test_queued_first_question_carries_source_and_reason(kb: KnowledgeBase) -> None:
+    hooks = StubHooks([_queue_item("q1", "successor", "후임 질문")])
+    service = SessionService(kb, FakeLLM(), clock=lambda: FIXED_NOW, hooks=hooks)
+    _, first = service.start(ROLE, "kim")
+    assert (first.kind, first.source, first.reason) == ("queued", "successor", "후임 질문")
+
+
+def test_queued_next_question_carries_source_and_reason(kb: KnowledgeBase) -> None:
+    hooks = StubHooks([])
+    service = SessionService(kb, NoFollowUpLLM(), clock=lambda: FIXED_NOW, hooks=hooks)
+    session_id, first = service.start(ROLE, "kim")
+    assert first.source is None
+    hooks.items.append(_queue_item("q2", "gap", QUEUE_REASON))
+    nxt = service.answer(session_id, ANSWER_MAIN)
+    assert nxt is not None
+    assert (nxt.id, nxt.kind, nxt.source, nxt.reason) == ("q2", "queued", "gap", QUEUE_REASON)
+    view = service.view(session_id)
+    assert view.question is not None
+    assert view.question.source == "gap"
+
+
+def test_end_ingests_with_session_leaver(svc: SessionService, kb: KnowledgeBase) -> None:
+    _finish_first_node(svc, "kim")
+    assert kb.query(QUERY_HIT, leaver="kim").found is True
+    assert kb.query(QUERY_HIT, leaver="lee").found is False
+
+
+def test_end_default_leaver_scoped(svc: SessionService, kb: KnowledgeBase) -> None:
+    _finish_first_node(svc)
+    assert kb.query(QUERY_HIT, leaver=DEFAULT_LEAVER).found is True

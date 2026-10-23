@@ -95,7 +95,7 @@ class SuccessorService:
         self._router = router
 
     def ask(self, kb: KnowledgeBase, req: AskRequest, role: str = DEFAULT_ROLE) -> AskResponse:
-        ans = kb.query(req.question)
+        ans = kb.query(req.question, leaver=req.leaver)
         if ans.found:
             uncertain = any(uncertain_cues(c.excerpt) for c in ans.citations)
             return AskResponse(

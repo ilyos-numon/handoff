@@ -7,8 +7,16 @@ from pathlib import Path
 
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
+)
 
+from handoff.privacy import scrub_contacts
 from handoff.providers import LLM, Embedder, ProviderError
 from handoff.question_tree import Axis
 
@@ -83,32 +91,45 @@ class KnowledgeBase:
                 vectors_config=VectorParams(size=embedder.dim, distance=Distance.COSINE),
             )
 
-    def add(self, entries: list[KBEntry]) -> int:
+    def add(self, entries: list[KBEntry], leaver: str = "default") -> int:
         if not entries:
             return 0
+        payloads: list[dict[str, object]] = []
+        for e in entries:
+            payload = e.model_dump(mode="json")
+            payload["leaver"] = leaver
+            payload["answer"] = scrub_contacts(e.answer)
+            payload["question"] = scrub_contacts(e.question)
+            payloads.append(payload)
         texts = [
-            f"{e.question}\n{e.answer}" if self._embed_with_question else e.answer
-            for e in entries
+            f"{p['question']}\n{p['answer']}" if self._embed_with_question else str(p["answer"])
+            for p in payloads
         ]
         vectors = self._embedder.embed(texts)
         points = [
             PointStruct(
                 id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"{e.session_id}:{e.question_id}")),
                 vector=vec,
-                payload=e.model_dump(mode="json"),
+                payload=payload,
             )
-            for e, vec in zip(entries, vectors)
+            for e, payload, vec in zip(entries, payloads, vectors)
         ]
         self._client.upsert(collection_name=self._collection, points=points)
         return len(points)
 
-    def query(self, question: str, top_k: int = 3) -> KBAnswer:
+    def query(self, question: str, top_k: int = 3, leaver: str | None = None) -> KBAnswer:
         vector = self._embedder.embed([question])[0]
         if not any(vector):
             return _not_found()
+        query_filter = (
+            Filter(must=[FieldCondition(key="leaver", match=MatchValue(value=leaver))])
+            if leaver is not None
+            else None
+        )
         result = self._client.query_points(
             collection_name=self._collection,
             query=vector,
+            query_filter=query_filter,
             limit=top_k,
             with_payload=True,
         )
@@ -122,7 +143,7 @@ class KnowledgeBase:
                     session_id=payload["session_id"],
                     question_id=payload["question_id"],
                     axis=payload["axis"],
-                    excerpt=str(payload["answer"])[:EXCERPT_MAX],
+                    excerpt=scrub_contacts(str(payload["answer"]))[:EXCERPT_MAX],
                     score=round(point.score, 4),
                     session_number=payload.get("session_number"),
                     created_at=payload.get("created_at"),
@@ -137,6 +158,7 @@ class KnowledgeBase:
             return KBAnswer(found=True, answer=COMPOSE_FAILED_MESSAGE, citations=citations)
         if answer is None:
             return _not_found()
+        answer = scrub_contacts(answer)
         if self._verifier is None:
             return KBAnswer(found=True, answer=answer, citations=citations)
         kept, removed = self._verifier(question, answer, citations)
@@ -144,7 +166,9 @@ class KnowledgeBase:
             return KBAnswer(
                 found=False, answer=NOT_FOUND_MESSAGE, citations=[], claims_removed=removed
             )
-        return KBAnswer(found=True, answer=kept, citations=citations, claims_removed=removed)
+        return KBAnswer(
+            found=True, answer=scrub_contacts(kept), citations=citations, claims_removed=removed
+        )
 
     def close(self) -> None:
         self._client.close()

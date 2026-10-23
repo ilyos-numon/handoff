@@ -428,8 +428,10 @@ def store() -> KnowledgeStore:
 class StubKB:
     def __init__(self, answer: KBAnswer | Exception) -> None:
         self.answer = answer
+        self.leavers: list[str | None] = []
 
-    def query(self, question: str, top_k: int = 3) -> KBAnswer:
+    def query(self, question: str, top_k: int = 3, leaver: str | None = None) -> KBAnswer:
+        self.leavers.append(leaver)
         if isinstance(self.answer, Exception):
             raise self.answer
         return self.answer
@@ -459,6 +461,12 @@ def test_service_found_not_queued(store: KnowledgeStore) -> None:
     res = svc.ask(StubKB(FOUND), AskRequest(question=QUERY_HIT, leaver="loop"))  # type: ignore[arg-type]
     assert res.queued is None
     assert svc.list("loop") == []
+
+
+def test_service_ask_scopes_query_to_leaver(store: KnowledgeStore) -> None:
+    kb = StubKB(FOUND)
+    SuccessorService(store).ask(kb, AskRequest(question=QUERY_HIT, leaver="kim"))  # type: ignore[arg-type]
+    assert kb.leavers == ["kim"]
 
 
 # ---- 라우터
@@ -499,13 +507,25 @@ def test_route_ask_found_queued_null(store: KnowledgeStore, tmp_path: Path) -> N
         tmp_path / "qdrant", FakeEmbedder(), llm, MIN_SCORE, verifier=ClaimVerifier(llm)
     )
     try:
-        kb.add(_entries())
+        kb.add(_entries(), "loop")
         res = _client(store, kb).post("/kb/ask", json={"question": QUERY_HIT, "leaver": "loop"})
     finally:
         kb.close()
     assert res.status_code == 200
     assert res.json()["answer"]["found"] is True
     assert res.json()["queued"] is None
+
+
+def test_route_ask_other_leaver_answer_not_used(store: KnowledgeStore, tmp_path: Path) -> None:
+    kb = KnowledgeBase(tmp_path / "qdrant", FakeEmbedder(), FakeLLM(), MIN_SCORE)
+    try:
+        kb.add(_entries(), "other")
+        res = _client(store, kb).post("/kb/ask", json={"question": QUERY_HIT, "leaver": "loop"})
+    finally:
+        kb.close()
+    assert res.status_code == 200
+    assert res.json()["answer"]["found"] is False
+    assert res.json()["queued"] is not None
 
 
 def test_route_ask_provider_error_503(store: KnowledgeStore) -> None:

@@ -28,6 +28,8 @@ class Question(BaseModel):
     axis: Axis
     text: str
     kind: QuestionKind
+    source: str | None = None
+    reason: str | None = None
 
 
 class SessionNotFoundError(LookupError):
@@ -129,7 +131,14 @@ class SessionService:
         if self._hooks is not None:
             item = self._hooks.next_queued(session_id, leaver, role)
             if item is not None:
-                first = Question(id=item.id, axis=item.axis, text=item.text, kind="queued")
+                first = Question(
+                    id=item.id,
+                    axis=item.axis,
+                    text=item.text,
+                    kind="queued",
+                    source=item.source,
+                    reason=item.reason,
+                )
         if first is None:
             if index >= len(tree.nodes):
                 raise TreeExhaustedError(f"question tree {role} is exhausted for {leaver}")
@@ -221,7 +230,14 @@ class SessionService:
             row.node_index += 1
         item = hooks.next_queued(row.session_id, row.leaver, row.role)
         if item is not None:
-            return Question(id=item.id, axis=item.axis, text=item.text, kind="queued")
+            return Question(
+                id=item.id,
+                axis=item.axis,
+                text=item.text,
+                kind="queued",
+                source=item.source,
+                reason=item.reason,
+            )
         if row.node_index < len(tree.nodes):
             return _main_question(tree, row.node_index)
         return None
@@ -229,7 +245,7 @@ class SessionService:
     def end(self, session_id: str) -> int:
         row = self._get_open(session_id)
         answers = self._store.answers(session_id)
-        ingested = self._kb.add(answers)
+        ingested = self._kb.add(answers, row.leaver)
         summary = self._llm.summarize(answers)
         row.ended_at = self._clock()
         row.summary = list(summary)

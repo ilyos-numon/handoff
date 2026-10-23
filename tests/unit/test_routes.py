@@ -83,6 +83,8 @@ def test_start_session(client: TestClient) -> None:
         "axis": first.axis,
         "text": first.text,
         "kind": "main",
+        "source": None,
+        "reason": None,
     }
 
 

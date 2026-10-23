@@ -86,7 +86,12 @@ def test_start_returns_queued_question_first(kb: KnowledgeBase, store: SessionSt
     hooks = FakeHooks(queue=[_item("q1")])
     session_id, question = _service(kb, store, hooks).start(ROLE, LEAVER)
     assert question == Question(
-        id="q1", axis="incidents", text="정산 배치가 실패하면 어떻게 하나요?", kind="queued"
+        id="q1",
+        axis="incidents",
+        text="정산 배치가 실패하면 어떻게 하나요?",
+        kind="queued",
+        source="successor",
+        reason="후임 미답 질문",
     )
     assert hooks.next_calls == [(session_id, LEAVER, ROLE)]
 

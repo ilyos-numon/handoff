@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from qdrant_client.models import PointStruct
 
 from handoff.config import Settings
 from handoff.kb import (
@@ -298,3 +299,123 @@ def test_citation_session_number_and_created_at(kb: KnowledgeBase) -> None:
 def test_citation_session_number_missing_is_none(loaded_kb: KnowledgeBase) -> None:
     result = loaded_kb.query(QUERY_HIT)
     assert result.citations[0].session_number is None
+
+
+CONTACT_ANSWER = "금요일 배포 장애 때는 010-1234-5678 또는 ops.lead@example.com 으로 연락했습니다."
+OTHER_ANSWER = "금요일 배포는 다른 팀 기준으로 오후에만 합니다."
+
+
+def _payloads(kb: KnowledgeBase) -> list[dict[str, object]]:
+    points, _ = kb._client.scroll(collection_name=kb._collection, with_payload=True)
+    return [dict(p.payload or {}) for p in points]
+
+
+def test_add_default_leaver_in_payload(loaded_kb: KnowledgeBase) -> None:
+    assert {p["leaver"] for p in _payloads(loaded_kb)} == {"default"}
+
+
+def test_add_stores_leaver_in_payload(kb: KnowledgeBase) -> None:
+    kb.add(_entries(), "kim")
+    assert {p["leaver"] for p in _payloads(kb)} == {"kim"}
+
+
+def _two_leavers(kb: KnowledgeBase) -> None:
+    kb.add(_entries(), "kim")
+    other = _entries()[0].model_copy(
+        update={"session_id": "sess-lee", "question_id": "inc-09", "answer": OTHER_ANSWER}
+    )
+    kb.add([other], "lee")
+
+
+def test_query_scoped_excludes_other_leaver(kb: KnowledgeBase) -> None:
+    _two_leavers(kb)
+    result = kb.query(QUERY_HIT, leaver="lee")
+    assert result.found is True
+    assert {c.session_id for c in result.citations} == {"sess-lee"}
+
+
+def test_query_scoped_same_leaver_found(kb: KnowledgeBase) -> None:
+    _two_leavers(kb)
+    result = kb.query(QUERY_HIT, leaver="kim")
+    assert result.found is True
+    assert {c.session_id for c in result.citations} == {SESSION_ID}
+    assert result.citations[0].question_id == "inc-01"
+
+
+def test_query_scoped_unknown_leaver_not_found(kb: KnowledgeBase) -> None:
+    _two_leavers(kb)
+    result = kb.query(QUERY_HIT, leaver="park")
+    assert result.found is False
+    assert result.answer == NOT_FOUND_MESSAGE
+    assert result.citations == []
+
+
+def test_query_without_leaver_searches_all(kb: KnowledgeBase) -> None:
+    _two_leavers(kb)
+    result = kb.query(QUERY_HIT, top_k=5)
+    assert {c.session_id for c in result.citations} == {SESSION_ID, "sess-lee"}
+
+
+def test_add_masks_contacts_in_payload(kb: KnowledgeBase) -> None:
+    entry = _entries()[0].model_copy(
+        update={"question": "급할 때 010-9876-5432 로 전화하나요?", "answer": CONTACT_ANSWER}
+    )
+    kb.add([entry], "kim")
+    (payload,) = _payloads(kb)
+    for key in ("answer", "question"):
+        text = str(payload[key])
+        assert "010-" not in text
+        assert "@example.com" not in text
+    assert "[전화번호]" in str(payload["answer"])
+    assert "[이메일]" in str(payload["answer"])
+    assert "[전화번호]" in str(payload["question"])
+
+
+def test_add_masks_contacts_in_embed_input(tmp_path: Path) -> None:
+    emb = RecordingEmbedder()
+    kb = KnowledgeBase(
+        tmp_path / "qdrant", emb, FakeLLM(), MIN_SCORE, embed_with_question=True
+    )
+    try:
+        entry = _entries()[0].model_copy(
+            update={"question": "번호 010-9876-5432?", "answer": CONTACT_ANSWER}
+        )
+        kb.add([entry])
+        (text,) = emb.calls[-1]
+        assert "010-" not in text
+        assert "ops.lead@example.com" not in text
+    finally:
+        kb.close()
+
+
+def test_query_masks_excerpt_and_answer_of_raw_payload(kb: KnowledgeBase) -> None:
+    entry = _entries()[0].model_copy(update={"answer": CONTACT_ANSWER})
+    vector = FakeEmbedder().embed([CONTACT_ANSWER])[0]
+    kb._client.upsert(
+        collection_name=kb._collection,
+        points=[PointStruct(id=1, vector=vector, payload=entry.model_dump(mode="json"))],
+    )
+    result = kb.query(CONTACT_ANSWER)
+    assert result.found is True
+    excerpt = result.citations[0].excerpt
+    assert "010-1234-5678" not in excerpt
+    assert "ops.lead@example.com" not in excerpt
+    assert "[전화번호]" in excerpt and "[이메일]" in excerpt
+    assert "010-1234-5678" not in result.answer
+    assert "ops.lead@example.com" not in result.answer
+
+
+class ContactLeakLLM(FakeLLM):
+    def compose_answer(self, question: str, citations: list[Citation]) -> str | None:
+        return "담당자 02-123-4567, help@example.org 로 문의하세요."
+
+
+def test_query_masks_composed_answer(tmp_path: Path) -> None:
+    kb = KnowledgeBase(tmp_path / "qdrant", FakeEmbedder(), ContactLeakLLM(), MIN_SCORE)
+    try:
+        kb.add(_entries(), "kim")
+        result = kb.query(QUERY_HIT, leaver="kim")
+        assert result.found is True
+        assert result.answer == "담당자 [전화번호], [이메일] 로 문의하세요."
+    finally:
+        kb.close()
