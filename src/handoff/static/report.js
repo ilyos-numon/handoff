@@ -17,6 +17,7 @@
     generated: "업무 자료",
   };
   var QUEUE_STATUS_LABELS = { pending: "대기", asked: "질문함", answered: "답변됨" };
+  var GAP_RISK_LABELS = { high: "높음", medium: "보통", low: "낮음" };
   var ARTIFACT_KINDS = ["runbook", "onboarding_30d", "pitfalls_top10", "adr", "premortem"];
   var ARTIFACT_TITLES = {
     runbook: "운영 런북",
@@ -193,7 +194,7 @@
     var gaps = Array.isArray(report.gaps) ? report.gaps : [];
     var areas = Array.isArray(report.unknown_areas) ? report.unknown_areas : [];
     renderList(gapsBox, gaps, "찾은 빈 구멍이 없습니다.", "gap", function (g) {
-      return g.topic + " · " + g.risk;
+      return g.topic + " · 위험도 " + (GAP_RISK_LABELS[g.risk] || g.risk);
     });
     renderList(unknownBox, areas, "찾은 영역이 없습니다.", "unknown-area", function (u) {
       return u.topic;

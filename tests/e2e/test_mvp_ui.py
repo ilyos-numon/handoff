@@ -83,6 +83,20 @@ def test_chat_answer_and_not_found(
     expect(not_found.first.locator(".queued-notice")).to_contain_text("퇴사자 질문 목록에 올렸습니다")
     _shot(page, shot_dir, "05-chat-not-found.png")
 
+    page.locator("#fence-input").fill("금요일 배포 금지")
+    page.locator("#fence-send").click()
+    fence = page.locator(".fence-answer")
+    expect(fence).to_have_count(1)
+    expect(fence.first).to_have_class(re.compile(r"\bnot-found\b"))
+    expect(fence.first.locator(".answer-text")).to_have_text(
+        "이 결정의 이유는 인수인계 기록에 없습니다."
+    )
+    expect(fence.first.locator(".certainty")).to_have_count(0)
+    expect(fence.first.locator(".fence-reason")).to_have_count(0)
+    expect(fence.first.locator(".queued-notice")).to_contain_text("퇴사자 질문 목록에 올렸습니다")
+    if fence.first.locator(".fence-risk").count():
+        expect(fence.first.locator(".fence-heading")).to_have_text("관련 위험:")
+
 
 def test_report_shows_axes_and_empty_topics(
     start_server: StartServer, page: Page, shot_dir: Path, tmp_path: Path
@@ -96,6 +110,17 @@ def test_report_shows_axes_and_empty_topics(
     expect(page.locator("li.empty-topic").first).to_be_visible()
     expect(page.locator("#report-title")).to_contain_text("세션 1/10 기준")
     _shot(page, shot_dir, "06-report.png")
+
+    page.locator("#sources-mock").click()
+    expect(page.locator("#report-status")).to_contain_text("불러왔습니다")
+    page.locator("#questions-generate").click()
+    expect(page.locator("#report-status")).to_contain_text("큐에 넣었습니다")
+    page.locator("#gaps-refresh").click()
+    expect(page.locator("#report-status")).to_contain_text("찾았습니다")
+    gaps = page.locator("#gaps li.gap")
+    expect(gaps.first).to_contain_text(re.compile(r"위험도 (높음|보통|낮음)$"))
+    for text in gaps.all_inner_texts():
+        assert not re.search(r"\b(high|medium|low)\b", text)
 
 
 def test_timer_expiry_shows_summary(

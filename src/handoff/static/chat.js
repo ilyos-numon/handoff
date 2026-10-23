@@ -23,6 +23,10 @@
   var LOGIN_REQUIRED = "초대 링크로 들어와 주세요.";
   var FORBIDDEN = "이 화면을 볼 권한이 없습니다.";
   var QUEUED_NOTICE = "퇴사자 질문 목록에 올렸습니다. 다음 세션에서 물어봅니다.";
+  var FENCE_NOT_FOUND = "이 결정의 이유는 인수인계 기록에 없습니다.";
+  var FENCE_REASON_HEADING = "이유:";
+  var FENCE_RISK_HEADING = "바꾸면 생길 위험:";
+  var FENCE_RELATED_RISK_HEADING = "관련 위험:";
 
   var log = document.getElementById("chat-log");
   var input = document.getElementById("chat-input");
@@ -118,15 +122,31 @@
     log.appendChild(box);
   }
 
+  function appendFencePoints(box, heading, points, className) {
+    if (!points.length) {
+      return;
+    }
+    box.appendChild(el("p", "fence-heading", heading));
+    points.forEach(function (p) {
+      box.appendChild(el("p", className, p.text));
+    });
+  }
+
   function appendFence(data) {
-    var box = el("div", data.found ? "msg bot fence-answer" : "msg bot fence-answer not-found");
-    (data.reasons || []).forEach(function (p) {
-      box.appendChild(el("p", "fence-reason", p.text));
-    });
-    (data.risks || []).forEach(function (p) {
-      box.appendChild(el("p", "fence-risk", p.text));
-    });
-    appendExtras(box, { certainty: data.certainty, queued: data.queued, route: null });
+    var reasons = Array.isArray(data.reasons) ? data.reasons : [];
+    var risks = Array.isArray(data.risks) ? data.risks : [];
+    var box;
+    if (data.found) {
+      box = el("div", "bot-answer fence-answer");
+      appendFencePoints(box, FENCE_REASON_HEADING, reasons, "fence-reason");
+      appendFencePoints(box, FENCE_RISK_HEADING, risks, "fence-risk");
+      appendExtras(box, { certainty: data.certainty, queued: data.queued, route: null });
+    } else {
+      box = el("div", "bot-answer fence-answer not-found");
+      box.appendChild(el("p", "answer-text", FENCE_NOT_FOUND));
+      appendFencePoints(box, FENCE_RELATED_RISK_HEADING, risks, "fence-risk");
+      appendExtras(box, { certainty: null, queued: data.queued, route: null });
+    }
     log.appendChild(box);
   }
 

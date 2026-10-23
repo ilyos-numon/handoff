@@ -122,6 +122,7 @@ main.card h2 { margin-top: 16px; }
 }
 .bot-answer .answer-text { white-space: pre-wrap; word-break: break-word; }
 .bot-answer.not-found { background: #fff6e5; border: 1px solid #f0d49a; }
+.fence-heading { margin: 8px 0 2px; font-weight: 600; }
 .citation { margin-top: 8px; padding: 6px 10px; border-left: 3px solid #2f6fab; background: #ffffff; border-radius: 4px; }
 .citation-meta { font-size: 0.82rem; color: #52606d; }
 .citation-excerpt { font-size: 0.92rem; white-space: pre-wrap; word-break: break-word; }
