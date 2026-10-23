@@ -133,3 +133,12 @@ main.card h2 { margin-top: 16px; }
   .axis-row { grid-template-columns: 5.5em 1fr 3.5em; gap: 6px; }
   .msg, .bot-answer { max-width: 100%; }
 }
+
+/* demo mode: role bar and side-by-side panes */
+.demo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; background: #fff8e1; border-bottom: 1px solid #e8d9a8; }
+.demo-bar a { color: #2f6fab; font-weight: 600; }
+#demo-expires { color: #52606d; font-size: 0.9rem; margin-left: auto; }
+.demo-intro { max-width: 960px; margin: 0 auto; padding: 12px 16px 0; }
+.demo-panes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; }
+.demo-panes iframe { width: 100%; height: 78vh; border: 1px solid #dde3e9; border-radius: 10px; background: #ffffff; }
+@media (max-width: 900px) { .demo-panes { grid-template-columns: 1fr; } }
