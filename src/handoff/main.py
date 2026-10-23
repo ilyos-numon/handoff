@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from handoff.config import Settings, collection_name, load_settings
 from handoff.kb import KnowledgeBase
+from handoff.knowledge_app import build_knowledge, include_knowledge_routers
 from handoff.providers import build_providers
 from handoff.question_tree import load_tree
 from handoff.routes import STATIC_DIR, Services, router
@@ -20,6 +21,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings = load_settings()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     embedder, llm = build_providers(settings)
+    store = SessionStore(settings.data_dir / "handoff.db")
+    knowledge = build_knowledge(settings, llm, store)
     kb = KnowledgeBase(
         settings.data_dir / "qdrant",
         embedder,
@@ -27,8 +30,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings.min_score,
         collection_name(settings),
         embed_with_question=(settings.provider != "fake"),
+        verifier=knowledge.verifier,
     )
-    store = SessionStore(settings.data_dir / "handoff.db")
     sessions = SessionService(
         kb,
         llm,
@@ -36,6 +39,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         session_seconds=settings.session_seconds,
         grace_seconds=settings.session_grace_seconds,
         planned=settings.sessions_planned,
+        hooks=knowledge.hooks,
     )
 
     @asynccontextmanager
@@ -48,6 +52,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="handoff", lifespan=lifespan)
     app.state.services = Services(sessions=sessions, kb=kb, trees=load_tree)
+    app.state.knowledge = knowledge
     app.include_router(router)
+    include_knowledge_routers(app)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     return app
