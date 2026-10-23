@@ -114,7 +114,8 @@
       var b = button("demo-role-" + role, ROLE_LABELS[role] + " 화면", function () {
         switchRole(role);
       });
-      if (status.role === role && window.location.pathname !== "/demo") b.className = "primary";
+      var shown = DEMO_ROLES.indexOf(asRole) !== -1 ? asRole : status.role;
+      if (shown === role && window.location.pathname !== "/demo") b.className = "primary";
       bar.appendChild(b);
     });
     var split = document.createElement("a");

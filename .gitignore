@@ -53,3 +53,4 @@ data/
 
 # 시연용 데이터 폴더 (docs/demo-scenario.md)
 demo-data/
+tests/e2e/screenshots/pd-*.png

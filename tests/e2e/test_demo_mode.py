@@ -122,6 +122,9 @@ def test_scenario_steps_replay_without_miss(
     # 11-13 successor: known question, unknown question, fence question
     page.goto(f"{base}/chat?as=successor")
     expect(page.locator("#chat-error")).to_be_hidden()
+    # the role bar highlights the ?as= role, not the cookie role (manager)
+    expect(page.locator("#demo-role-successor")).to_have_class(re.compile(r"\bprimary\b"))
+    expect(page.locator("#demo-role-manager")).not_to_have_class(re.compile(r"\bprimary\b"))
     page.locator("#chat-input").fill(ASK_KNOWN)
     page.locator("#chat-send").click()
     expect(page.locator(".bot-answer")).to_have_count(1)
