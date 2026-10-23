@@ -215,6 +215,77 @@ def test_qwen_drops_card_unrelated_to_any_answer() -> None:
     assert qwen_extract_cards(chat, entries, []) == []
 
 
+FRONT_ANSWER = "객실 고장 신고는 프런트 직원이 받고 시설 담당에게 넘깁니다. 수리 기록은 장부에 남깁니다."
+CLEAN_ANSWER = "청소는 오전 열 시 전에 끝냅니다. 늦어지면 체크인 문의가 들어옵니다."
+
+
+def _cards_json(cards: list[tuple[str, str, str, list[str]]]) -> str:
+    return json.dumps({"cards": [
+        {"type": t, "title": title, "body": body, "entities": [], "confidence": 0.8,
+         "evidence_question_ids": qids}
+        for t, title, body, qids in cards
+    ]}, ensure_ascii=False)
+
+
+def test_qwen_adds_contact_card_for_uncovered_handoff_answer() -> None:
+    entries = [_entry("h-01", FRONT_ANSWER), _entry("h-02", CLEAN_ANSWER)]
+    calls: list[tuple[str, str]] = []
+
+    def chat(system: str, user: str, max_tokens: int, json_mode: bool = False) -> str:
+        calls.append((system, user))
+        if len(calls) == 1:
+            return _cards_json([("procedure", "객실 고장 신고 처리", "수리 기록은 장부에 남깁니다.", ["h-01"])])
+        return _cards_json([("contact", "고장 신고 전달", "프런트 직원이 받고 시설 담당에게 넘깁니다.",
+                             ["h-02"])])
+
+    drafts = qwen_extract_cards(chat, entries, [])
+    assert len(calls) == 2
+    assert "[답변 id=h-01]" in calls[1][1]
+    assert "[답변 id=h-02]" not in calls[1][1]
+    contacts = [d for d in drafts if d.type == "contact"]
+    assert [d.evidence_question_ids for d in contacts] == [["h-01"]]
+    assert [d.type for d in drafts] == ["procedure", "contact"]
+
+
+def test_qwen_no_contact_followup_when_answer_already_has_contact_card() -> None:
+    entries = [_entry("h-01", FRONT_ANSWER)]
+    calls: list[str] = []
+
+    def chat(system: str, user: str, max_tokens: int, json_mode: bool = False) -> str:
+        calls.append(user)
+        return _cards_json([("contact", "고장 신고 전달", "프런트 직원이 받고 시설 담당에게 넘깁니다.",
+                             ["h-01"])])
+
+    drafts = qwen_extract_cards(chat, entries, [])
+    assert len(calls) == 1
+    assert [d.type for d in drafts] == ["contact"]
+
+
+def test_qwen_contact_followup_keeps_only_contact_cards() -> None:
+    entries = [_entry("h-01", FRONT_ANSWER)]
+    calls: list[str] = []
+
+    def chat(system: str, user: str, max_tokens: int, json_mode: bool = False) -> str:
+        calls.append(user)
+        return _cards_json([("procedure", "수리 기록", "수리 기록은 장부에 남깁니다.", ["h-01"])])
+
+    drafts = qwen_extract_cards(chat, entries, [])
+    assert len(calls) == 2
+    assert [d.type for d in drafts] == ["procedure"]
+
+
+def test_qwen_no_contact_followup_without_recipient() -> None:
+    entries = [_entry("h-02", CLEAN_ANSWER)]
+    calls: list[str] = []
+
+    def chat(system: str, user: str, max_tokens: int, json_mode: bool = False) -> str:
+        calls.append(user)
+        return '{"cards": []}'
+
+    assert qwen_extract_cards(chat, entries, []) == []
+    assert len(calls) == 1
+
+
 def test_qwen_provider_error_propagates() -> None:
     def chat(system: str, user: str, max_tokens: int, json_mode: bool = False) -> str:
         raise ProviderError("down")

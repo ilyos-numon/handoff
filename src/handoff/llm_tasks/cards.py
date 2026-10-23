@@ -27,6 +27,11 @@ QWEN_MAX_TOKENS = 1500
 # qwen evidence guard: bigram containment of card text in a cited answer.
 MIN_EVIDENCE_OVERLAP = 0.15
 EVIDENCE_RELATIVE = 0.5
+# An answer "names a contact" when one sentence has both a recipient and a
+# hand-off action (ask / notify / pass on).
+CONTACT_RECIPIENT_CUES = ("에게", "채널", "담당")
+CONTACT_ACTION_CUES = ("연락", "묻", "물어", "알리", "알립", "알려", "넘기", "넘깁", "넘겨",
+                       "전달", "공유", "문의", "부탁", "요청", "보고")
 
 EXTRACT_CARDS_SYSTEM = (
     "당신은 퇴사자 인수인계 답변을 지식 카드로 정리하는 도우미입니다. "
@@ -47,6 +52,27 @@ EXTRACT_CARDS_SYSTEM = (
     'JSON 만 출력합니다. 형식: {"cards": [{"type": "...", "title": "...", "body": "...", '
     '"entities": ["..."], "confidence": 0.8, "evidence_question_ids": ["..."]}]}'
 )
+
+CONTACT_CARDS_SYSTEM = (
+    "당신은 퇴사자 인수인계 답변에서 연락처(contact) 카드만 뽑는 도우미입니다. "
+    "각 답변에서 어떤 역할·채널에 묻고, 알리고, 넘기고, 요청하는지를 찾아 "
+    "답변마다 contact 카드를 하나씩 만듭니다. 누가 언제 어느 역할·채널로 무엇을 넘기는지 "
+    "답변에 나온 역할명·채널명을 그대로 써서 body 에 적습니다. "
+    "카드마다 type(항상 \"contact\"), title(80자 이내), body(600자 이내), entities, "
+    "confidence(0.0~1.0), evidence_question_ids(그 연락 대상을 직접 말한 답변의 id 하나)를 씁니다. "
+    "답변은 [답변 id=...] 머리로 구분됩니다. 근거에 없는 역할·채널을 지어내지 않습니다. "
+    "사람 이름 대신 역할명을 쓰고, 이메일·전화번호는 옮기지 않습니다. "
+    'JSON 만 출력합니다. 형식: {"cards": [{"type": "contact", "title": "...", "body": "...", '
+    '"entities": ["..."], "confidence": 0.8, "evidence_question_ids": ["..."]}]}'
+)
+
+
+def _names_contact(answer: str) -> bool:
+    return any(
+        any(cue in sentence for cue in CONTACT_RECIPIENT_CUES)
+        and any(cue in sentence for cue in CONTACT_ACTION_CUES)
+        for sentence in split_sentences(answer)
+    )
 
 
 def _classify(sentence: str) -> CardType | None:
@@ -168,4 +194,20 @@ def qwen_extract_cards(
     drafts = _parse(content)
     if drafts is None:
         return fake_extract_cards(entries, known_entities)
-    return _ground_evidence(drafts, entries)
+    grounded = _ground_evidence(drafts, entries)
+    return grounded + _missing_contacts(chat, entries, known_entities, grounded)
+
+
+def _missing_contacts(
+    chat: ChatFn, entries: list[KBEntry], known_entities: list[str], grounded: list[CardDraft]
+) -> list[CardDraft]:
+    """Ask once more, contact-only, for answers naming a contact but cited by no contact card."""
+    covered = {q for d in grounded if d.type == "contact" for q in d.evidence_question_ids}
+    targets = [e for e in entries if e.question_id not in covered and _names_contact(e.answer)]
+    if not targets:
+        return []
+    content = chat(
+        CONTACT_CARDS_SYSTEM, _user_prompt(targets, known_entities), QWEN_MAX_TOKENS, json_mode=True
+    )
+    extra = [d for d in _parse(content) or [] if d.type == "contact"]
+    return _ground_evidence(extra, targets)
