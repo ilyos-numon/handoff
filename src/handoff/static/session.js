@@ -3,6 +3,16 @@
 
   var ROLE = "backend_developer";
   var AXIS_LABELS = { systems: "담당 시스템", routines: "반복 업무", incidents: "사고 이력", people: "관계자" };
+  var SOURCE_LABELS = {
+    manager: "팀장이 우선 지정한 질문",
+    successor: "후임이 물어본 질문",
+    premortem: "사전 부검 질문",
+    gap: "빈 구멍 확인 질문",
+    generated: "업무 자료에서 만든 질문"
+  };
+  var SCREEN_ROLE = "leaver";
+  var MSG_LOGIN = "초대 링크로 들어와 주세요.";
+  var MSG_FORBIDDEN = "이 화면을 볼 권한이 없습니다.";
 
   var params = new URLSearchParams(window.location.search);
   var leaver = params.get("leaver") || "default";
@@ -13,6 +23,7 @@
     timer: document.getElementById("timer"),
     axis: document.getElementById("axis-label"),
     question: document.getElementById("question-text"),
+    source: document.getElementById("question-source"),
     transcript: document.getElementById("transcript"),
     input: document.getElementById("answer-input"),
     send: document.getElementById("send-button"),
@@ -53,6 +64,8 @@
 
   function errorMessage(err) {
     if (!(err instanceof HttpError)) return "잠시 후 다시 시도해 주세요. (연결 실패)";
+    if (err.status === 401) return MSG_LOGIN;
+    if (err.status === 403) return MSG_FORBIDDEN;
     if (err.status === 409 && err.detail === "session limit reached") return "모든 세션을 마쳤습니다. 수고하셨습니다.";
     if (err.status === 409 && err.detail === "question tree exhausted") return "준비된 질문을 모두 마쳤습니다.";
     if (err.status === 503) return "잠시 후 다시 시도해 주세요. (연결 실패)";
@@ -107,8 +120,15 @@
     el.transcript.scrollTop = el.transcript.scrollHeight;
   }
 
+  function renderSource(q) {
+    var label = q && q.source ? SOURCE_LABELS[q.source] : "";
+    el.source.textContent = label || "";
+    show(el.source, !!label);
+  }
+
   function showQuestion(q, appendToTranscript) {
     el.question.textContent = q.text;
+    renderSource(q);
     el.axis.textContent = AXIS_LABELS[q.axis] || q.axis;
     if (appendToTranscript) addMessage("bot", q.text);
   }
@@ -167,6 +187,7 @@
     renderTimer();
     setControls(false);
     el.question.textContent = "";
+    renderSource(null);
     renderSummary(summaryLines);
   }
 
@@ -330,5 +351,34 @@
     }
   });
 
-  restore();
+  function denyEntry(message) {
+    setControls(false);
+    el.start.disabled = true;
+    el.error.textContent = message;
+    el.error.classList.remove("hidden");
+  }
+
+  function init() {
+    el.start.disabled = true;
+    request("GET", "/auth/me")
+      .then(function (me) {
+        if (me && me.auth) {
+          if (!me.role) return denyEntry(MSG_LOGIN);
+          if (me.role !== SCREEN_ROLE) return denyEntry(MSG_FORBIDDEN);
+          leaver = me.leaver;
+          storageKey = "handoff.session." + leaver;
+        }
+        restore();
+      })
+      .catch(function (err) {
+        showError(err);
+        if (err instanceof HttpError && (err.status === 401 || err.status === 403)) {
+          denyEntry(errorMessage(err));
+        } else {
+          el.start.disabled = false;
+        }
+      });
+  }
+
+  init();
 })();
