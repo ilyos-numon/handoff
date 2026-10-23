@@ -27,6 +27,9 @@ class Settings:
     session_seconds: int = 900
     session_grace_seconds: int = 30
     sessions_planned: int = 10
+    depth_max_followups: int = 1
+    queue_per_session: int = 2
+    verify_claims: bool = True
 
 
 def _float(source: Mapping[str, str], name: str, default: float) -> float:
@@ -52,6 +55,17 @@ def _int(source: Mapping[str, str], name: str, default: int, minimum: int) -> in
     return value
 
 
+def _on_off(source: Mapping[str, str], name: str, default: bool) -> bool:
+    raw = source.get(name)
+    if raw is None:
+        return default
+    if raw == "on":
+        return True
+    if raw == "off":
+        return False
+    raise ValueError(f"{name} must be on or off")
+
+
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     """Load settings from ``env`` (defaults to ``os.environ``)."""
     source: Mapping[str, str] = os.environ if env is None else env
@@ -75,6 +89,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         session_seconds=_int(source, "HANDOFF_SESSION_SECONDS", 900, 1),
         session_grace_seconds=_int(source, "HANDOFF_SESSION_GRACE_SECONDS", 30, 0),
         sessions_planned=_int(source, "HANDOFF_SESSIONS_PLANNED", 10, 1),
+        depth_max_followups=_int(source, "HANDOFF_DEPTH_MAX_FOLLOWUPS", 1, 0),
+        queue_per_session=_int(source, "HANDOFF_QUEUE_PER_SESSION", 2, 0),
+        verify_claims=_on_off(source, "HANDOFF_VERIFY_CLAIMS", True),
     )
 
 

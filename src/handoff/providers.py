@@ -12,6 +12,23 @@ from handoff.config import Settings
 from handoff.question_tree import AXIS_LABELS, FollowUp
 
 if TYPE_CHECKING:
+    from handoff.contracts import (
+        ArtifactKind,
+        ArtifactSection,
+        CardDraft,
+        ClaimVerdict,
+        ContradictionDraft,
+        DrillDraft,
+        DrillFeedbackDraft,
+        DrillScenario,
+        Entity,
+        EntityDraft,
+        GeneratedQuestion,
+        KnowledgeCard,
+        Slot,
+        SlotJudgement,
+        SourceDoc,
+    )
     from handoff.kb import Citation, KBEntry
 
 EMBED_DIM = 1024
@@ -37,6 +54,34 @@ class LLM(Protocol):
     def compose_answer(self, question: str, citations: list[Citation]) -> str | None: ...
 
     def summarize(self, entries: list[KBEntry]) -> list[str]: ...
+
+    def extract_entities(self, docs: list[SourceDoc]) -> list[EntityDraft]: ...
+
+    def generate_questions(self, entities: list[Entity], limit: int) -> list[GeneratedQuestion]: ...
+
+    def judge_depth(self, question: str, answer: str) -> SlotJudgement: ...
+
+    def slot_follow_up(self, question: str, answer: str, slot: Slot) -> str: ...
+
+    def extract_cards(
+        self, entries: list[KBEntry], known_entities: list[str]
+    ) -> list[CardDraft]: ...
+
+    def find_contradictions(self, cards: list[KnowledgeCard]) -> list[ContradictionDraft]: ...
+
+    def verify_claims(
+        self, question: str, claims: list[str], citations: list[Citation]
+    ) -> list[ClaimVerdict]: ...
+
+    def write_artifact(
+        self, kind: ArtifactKind, cards: list[KnowledgeCard]
+    ) -> list[ArtifactSection]: ...
+
+    def make_drill(self, cards: list[KnowledgeCard], seed: KnowledgeCard | None) -> DrillDraft: ...
+
+    def review_drill(
+        self, drill: DrillScenario, cards: list[KnowledgeCard], answer: str
+    ) -> DrillFeedbackDraft: ...
 
 
 def fake_summary(entries: list[KBEntry]) -> list[str]:
@@ -95,6 +140,62 @@ class FakeLLM:
 
     def summarize(self, entries: list[KBEntry]) -> list[str]:
         return fake_summary(entries)
+
+    def extract_entities(self, docs: list[SourceDoc]) -> list[EntityDraft]:
+        from handoff.llm_tasks.sources import fake_extract_entities
+
+        return fake_extract_entities(docs)
+
+    def generate_questions(self, entities: list[Entity], limit: int) -> list[GeneratedQuestion]:
+        from handoff.llm_tasks.sources import fake_generate_questions
+
+        return fake_generate_questions(entities, limit)
+
+    def judge_depth(self, question: str, answer: str) -> SlotJudgement:
+        from handoff.llm_tasks.depth import fake_judge_depth
+
+        return fake_judge_depth(question, answer)
+
+    def slot_follow_up(self, question: str, answer: str, slot: Slot) -> str:
+        from handoff.llm_tasks.depth import fake_slot_follow_up
+
+        return fake_slot_follow_up(question, answer, slot)
+
+    def extract_cards(self, entries: list[KBEntry], known_entities: list[str]) -> list[CardDraft]:
+        from handoff.llm_tasks.cards import fake_extract_cards
+
+        return fake_extract_cards(entries, known_entities)
+
+    def find_contradictions(self, cards: list[KnowledgeCard]) -> list[ContradictionDraft]:
+        from handoff.llm_tasks.gaps import fake_find_contradictions
+
+        return fake_find_contradictions(cards)
+
+    def verify_claims(
+        self, question: str, claims: list[str], citations: list[Citation]
+    ) -> list[ClaimVerdict]:
+        from handoff.llm_tasks.verify import fake_verify_claims
+
+        return fake_verify_claims(question, claims, citations)
+
+    def write_artifact(
+        self, kind: ArtifactKind, cards: list[KnowledgeCard]
+    ) -> list[ArtifactSection]:
+        from handoff.llm_tasks.artifacts import fake_write_artifact
+
+        return fake_write_artifact(kind, cards)
+
+    def make_drill(self, cards: list[KnowledgeCard], seed: KnowledgeCard | None) -> DrillDraft:
+        from handoff.llm_tasks.drill import fake_make_drill
+
+        return fake_make_drill(cards, seed)
+
+    def review_drill(
+        self, drill: DrillScenario, cards: list[KnowledgeCard], answer: str
+    ) -> DrillFeedbackDraft:
+        from handoff.llm_tasks.drill import fake_review_drill
+
+        return fake_review_drill(drill, cards, answer)
 
 
 def build_providers(settings: Settings) -> tuple[Embedder, LLM]:

@@ -174,3 +174,44 @@ def test_collection_name_qwen_includes_model_and_dim() -> None:
         }
     )
     assert collection_name(custom) == "handoff_kb_text_embedding_v3_512"
+
+
+def test_loop_setting_defaults() -> None:
+    settings = load_settings({})
+    assert settings.depth_max_followups == 1
+    assert settings.queue_per_session == 2
+    assert settings.verify_claims is True
+
+
+def test_loop_setting_overrides() -> None:
+    settings = load_settings(
+        {
+            "HANDOFF_DEPTH_MAX_FOLLOWUPS": "0",
+            "HANDOFF_QUEUE_PER_SESSION": "5",
+            "HANDOFF_VERIFY_CLAIMS": "off",
+        }
+    )
+    assert settings.depth_max_followups == 0
+    assert settings.queue_per_session == 5
+    assert settings.verify_claims is False
+    assert load_settings({"HANDOFF_VERIFY_CLAIMS": "on"}).verify_claims is True
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("HANDOFF_DEPTH_MAX_FOLLOWUPS", "-1"),
+        ("HANDOFF_DEPTH_MAX_FOLLOWUPS", "one"),
+        ("HANDOFF_QUEUE_PER_SESSION", "-1"),
+        ("HANDOFF_QUEUE_PER_SESSION", "1.5"),
+    ],
+)
+def test_invalid_loop_integers_name_variable(name: str, value: str) -> None:
+    with pytest.raises(ValueError, match=name):
+        load_settings({name: value})
+
+
+@pytest.mark.parametrize("value", ["yes", "true", "ON", "1", ""])
+def test_verify_claims_rejects_non_on_off(value: str) -> None:
+    with pytest.raises(ValueError, match="HANDOFF_VERIFY_CLAIMS must be on or off"):
+        load_settings({"HANDOFF_VERIFY_CLAIMS": value})

@@ -13,6 +13,23 @@ from handoff.providers import SUMMARY_EMPTY, ProviderError, fake_summary
 from handoff.question_tree import AXIS_LABELS, FollowUp
 
 if TYPE_CHECKING:
+    from handoff.contracts import (
+        ArtifactKind,
+        ArtifactSection,
+        CardDraft,
+        ClaimVerdict,
+        ContradictionDraft,
+        DrillDraft,
+        DrillFeedbackDraft,
+        DrillScenario,
+        Entity,
+        EntityDraft,
+        GeneratedQuestion,
+        KnowledgeCard,
+        Slot,
+        SlotJudgement,
+        SourceDoc,
+    )
     from handoff.kb import Citation, KBEntry
 
 RETRY_WAIT_S = 1.0
@@ -217,6 +234,62 @@ class QwenLLM:
             return fallback
         lines.extend(fallback[len(lines) :])
         return lines
+
+    def extract_entities(self, docs: list[SourceDoc]) -> list[EntityDraft]:
+        from handoff.llm_tasks.sources import qwen_extract_entities
+
+        return qwen_extract_entities(self._chat, docs)
+
+    def generate_questions(self, entities: list[Entity], limit: int) -> list[GeneratedQuestion]:
+        from handoff.llm_tasks.sources import qwen_generate_questions
+
+        return qwen_generate_questions(self._chat, entities, limit)
+
+    def judge_depth(self, question: str, answer: str) -> SlotJudgement:
+        from handoff.llm_tasks.depth import qwen_judge_depth
+
+        return qwen_judge_depth(self._chat, question, answer)
+
+    def slot_follow_up(self, question: str, answer: str, slot: Slot) -> str:
+        from handoff.llm_tasks.depth import qwen_slot_follow_up
+
+        return qwen_slot_follow_up(self._chat, question, answer, slot)
+
+    def extract_cards(self, entries: list[KBEntry], known_entities: list[str]) -> list[CardDraft]:
+        from handoff.llm_tasks.cards import qwen_extract_cards
+
+        return qwen_extract_cards(self._chat, entries, known_entities)
+
+    def find_contradictions(self, cards: list[KnowledgeCard]) -> list[ContradictionDraft]:
+        from handoff.llm_tasks.gaps import qwen_find_contradictions
+
+        return qwen_find_contradictions(self._chat, cards)
+
+    def verify_claims(
+        self, question: str, claims: list[str], citations: list[Citation]
+    ) -> list[ClaimVerdict]:
+        from handoff.llm_tasks.verify import qwen_verify_claims
+
+        return qwen_verify_claims(self._chat, question, claims, citations)
+
+    def write_artifact(
+        self, kind: ArtifactKind, cards: list[KnowledgeCard]
+    ) -> list[ArtifactSection]:
+        from handoff.llm_tasks.artifacts import qwen_write_artifact
+
+        return qwen_write_artifact(self._chat, kind, cards)
+
+    def make_drill(self, cards: list[KnowledgeCard], seed: KnowledgeCard | None) -> DrillDraft:
+        from handoff.llm_tasks.drill import qwen_make_drill
+
+        return qwen_make_drill(self._chat, cards, seed)
+
+    def review_drill(
+        self, drill: DrillScenario, cards: list[KnowledgeCard], answer: str
+    ) -> DrillFeedbackDraft:
+        from handoff.llm_tasks.drill import qwen_review_drill
+
+        return qwen_review_drill(self._chat, drill, cards, answer)
 
 
 class QwenEmbedder:
