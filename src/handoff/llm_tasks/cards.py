@@ -6,7 +6,14 @@ import json
 
 from pydantic import ValidationError
 
-from handoff.contracts import CardDraft, CardType, ChatFn, KBEntry, split_sentences
+from handoff.contracts import (
+    CardDraft,
+    CardType,
+    ChatFn,
+    KBEntry,
+    containment,
+    split_sentences,
+)
 
 TYPE_CUES: tuple[tuple[CardType, tuple[str, ...]], ...] = (
     ("contact", ("연락", "에게 묻", "문의", "채널")),
@@ -17,14 +24,24 @@ TYPE_CUES: tuple[tuple[CardType, tuple[str, ...]], ...] = (
 TITLE_MAX = 80
 BODY_MAX = 600
 QWEN_MAX_TOKENS = 1500
+# qwen evidence guard: bigram containment of card text in a cited answer.
+MIN_EVIDENCE_OVERLAP = 0.15
+EVIDENCE_RELATIVE = 0.5
 
 EXTRACT_CARDS_SYSTEM = (
     "당신은 퇴사자 인수인계 답변을 지식 카드로 정리하는 도우미입니다. "
     "답변을 읽고 절차(procedure)·함정(pitfall)·결정(decision)·연락처(contact)·엔티티(entity) "
     "다섯 타입의 카드를 만듭니다. "
+    "procedure 는 순서대로 하는 일, pitfall 은 하면 안 되는 일·놓치면 생기는 실패·주의할 점, "
+    "decision 은 그렇게 정한 이유·선택, contact 는 어떤 역할·채널에 묻고 알리고 넘기는지, "
+    "entity 는 시스템·도구·문서입니다. 한 답변에 여러 타입 내용이 있으면 타입마다 카드를 따로 만듭니다. "
+    "답변에 묻거나 알리거나 넘기는 역할·채널이 나오면 다른 카드와 별도로 contact 카드도 만듭니다. "
     "카드마다 type, title(80자 이내), body(600자 이내), entities(관련 엔티티 이름 목록), "
     "confidence(0.0~1.0, 답변이 구체적일수록 높게), evidence_question_ids(근거 답변의 질문 id 목록, "
     "1개 이상)를 씁니다. "
+    "답변은 [답변 id=...] 머리로 구분됩니다. 카드는 되도록 답변 하나의 내용으로 만들고, "
+    "evidence_question_ids 에는 그 카드 내용을 직접 말한 답변의 id 만 그대로 옮겨 씁니다. "
+    "같은 묶음에 있다는 이유로 다른 답변 id 를 넣지 않습니다. "
     "근거에 없는 사실·이름을 지어내지 않습니다. 사람 이름 대신 역할명을 씁니다. "
     "이메일·전화번호는 카드에 옮기지 않습니다. "
     'JSON 만 출력합니다. 형식: {"cards": [{"type": "...", "title": "...", "body": "...", '
@@ -82,8 +99,37 @@ def fake_extract_cards(entries: list[KBEntry], known_entities: list[str]) -> lis
 def _user_prompt(entries: list[KBEntry], known_entities: list[str]) -> str:
     lines = [f"알려진 엔티티: {', '.join(known_entities) if known_entities else '(없음)'}", "답변:"]
     for entry in entries:
-        lines.append(f"- 질문 id: {entry.question_id}\n  질문: {entry.question}\n  답변: {entry.answer}")
+        lines.append(
+            f"[답변 id={entry.question_id}]\n질문: {entry.question}\n답변: {entry.answer}\n"
+            f"[답변 id={entry.question_id} 끝]"
+        )
     return "\n".join(lines)
+
+
+def _ground_evidence(drafts: list[CardDraft], entries: list[KBEntry]) -> list[CardDraft]:
+    """Point each card's evidence at answers that actually say its content.
+
+    Cited ids whose answer barely overlaps the card text are dropped; the
+    best-overlapping answer is added when it is not cited. Cards that overlap
+    no answer at all are dropped.
+    """
+    texts: dict[str, str] = {}
+    for entry in entries:
+        texts[entry.question_id] = f"{texts.get(entry.question_id, '')} {entry.answer}"
+    grounded: list[CardDraft] = []
+    for draft in drafts:
+        card_text = f"{draft.title} {draft.body}"
+        scores = {qid: containment(card_text, text) for qid, text in texts.items()}
+        best_qid = max(scores, key=lambda q: scores[q])
+        floor = max(MIN_EVIDENCE_OVERLAP, EVIDENCE_RELATIVE * scores[best_qid])
+        cited = [q for q in dict.fromkeys(draft.evidence_question_ids) if q in scores]
+        kept = [q for q in cited if scores[q] >= floor]
+        if scores[best_qid] >= MIN_EVIDENCE_OVERLAP and best_qid not in kept:
+            kept.insert(0, best_qid)
+        if not kept:
+            continue
+        grounded.append(draft.model_copy(update={"evidence_question_ids": kept}))
+    return grounded
 
 
 def _parse(content: str) -> list[CardDraft] | None:
@@ -122,4 +168,4 @@ def qwen_extract_cards(
     drafts = _parse(content)
     if drafts is None:
         return fake_extract_cards(entries, known_entities)
-    return drafts
+    return _ground_evidence(drafts, entries)

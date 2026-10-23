@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from handoff.contracts import (
     SESSION_NOT_FOUND,
     SLOT_FOLLOW_UP_TEMPLATES,
+    SLOT_TARGET_CUES,
     SLOTS,
     DepthJudgement,
     KnowledgeNotFound,
@@ -174,6 +175,55 @@ def test_qwen_slot_follow_up_parses_question() -> None:
 def test_qwen_slot_follow_up_parse_failure_uses_template(content: str) -> None:
     _, chat = _chat_returning(content)
     assert qwen_slot_follow_up(chat, "q", "a", "who") == SLOT_FOLLOW_UP_TEMPLATES["who"]  # type: ignore[arg-type]
+
+
+def _chat_sequence(contents: list[str]) -> tuple[list[tuple[str, str, int, bool]], object]:
+    calls: list[tuple[str, str, int, bool]] = []
+
+    def chat(system: str, user: str, max_tokens: int, json_mode: bool = False) -> str:
+        calls.append((system, user, max_tokens, json_mode))
+        return contents[min(len(calls) - 1, len(contents) - 1)]
+
+    return calls, chat
+
+
+@pytest.mark.parametrize("slot", SLOTS)
+def test_qwen_slot_follow_up_prompt_names_target_cues(slot: Slot) -> None:
+    calls, chat = _chat_returning(json.dumps({"question": "그 일은 언제 하나요?"}))
+    qwen_slot_follow_up(chat, "q", "a", slot)  # type: ignore[arg-type]
+    _, user, _, _ = calls[0]
+    assert any(cue in user for cue in SLOT_TARGET_CUES[slot])
+
+
+def test_qwen_slot_follow_up_on_target_first_try_calls_once() -> None:
+    calls, chat = _chat_sequence([json.dumps({"question": "그렇게 하는 이유는 무엇인가요?"})])
+    assert qwen_slot_follow_up(chat, "q", "a", "why") == "그렇게 하는 이유는 무엇인가요?"  # type: ignore[arg-type]
+    assert len(calls) == 1
+
+
+def test_qwen_slot_follow_up_off_target_retries_once() -> None:
+    calls, chat = _chat_sequence([
+        json.dumps({"question": "이 경우 누구에게 확인하나요?"}),
+        json.dumps({"question": "그렇게 확인하는 이유는 무엇인가요?"}),
+    ])
+    assert qwen_slot_follow_up(chat, "q", "a", "why") == "그렇게 확인하는 이유는 무엇인가요?"  # type: ignore[arg-type]
+    assert len(calls) == 2
+    assert "이유" in calls[1][1]
+
+
+def test_qwen_slot_follow_up_off_target_twice_returns_last_text() -> None:
+    calls, chat = _chat_sequence([json.dumps({"question": "그 밖에 더 말씀하실 것이 있나요?"})])
+    assert qwen_slot_follow_up(chat, "q", "a", "why") == "그 밖에 더 말씀하실 것이 있나요?"  # type: ignore[arg-type]
+    assert len(calls) == 2
+
+
+def test_qwen_judge_prompt_defines_every_slot_and_prefers_missing() -> None:
+    calls, chat = _chat_returning(json.dumps({"slots": {s: "missing" for s in SLOTS}}))
+    qwen_judge_depth(chat, "q", "a")  # type: ignore[arg-type]
+    system = calls[0][0]
+    for slot in SLOTS:
+        assert f"- {slot}:" in system
+    assert "확실하지 않으면 missing" in system
 
 
 # ---- DepthService.judge / suggest

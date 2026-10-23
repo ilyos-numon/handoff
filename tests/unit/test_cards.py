@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -158,6 +159,60 @@ def test_qwen_parses_valid_cards() -> None:
     assert len(drafts) == 1
     assert drafts[0].type == "pitfall"
     assert drafts[0].confidence == 0.9
+
+
+RETRY_ANSWER = "승인 요청 재시도 횟수는 함부로 바꾸면 안 됩니다. 재시도를 늘리면 중복 승인 위험이 생깁니다."
+DESK_ANSWER = "고객 문의는 고객센터 상담원이 먼저 받고 파트장이 티켓을 만들어 개발 채널에 넘깁니다."
+
+
+def _qwen_card(title: str, body: str, qids: list[str]) -> str:
+    return json.dumps({"cards": [{
+        "type": "pitfall", "title": title, "body": body, "entities": [],
+        "confidence": 0.8, "evidence_question_ids": qids,
+    }]}, ensure_ascii=False)
+
+
+def test_qwen_prompt_labels_each_answer_id() -> None:
+    seen: list[str] = []
+
+    def chat(system: str, user: str, max_tokens: int, json_mode: bool = False) -> str:
+        seen.append(system + user)
+        return '{"cards": []}'
+
+    qwen_extract_cards(chat, [_entry("sys-03", RETRY_ANSWER), _entry("ppl-04", DESK_ANSWER)], [])
+    assert "[답변 id=sys-03]" in seen[0]
+    assert "[답변 id=ppl-04]" in seen[0]
+    assert "직접 말한 답변의 id 만" in seen[0]
+
+
+def test_qwen_evidence_replaced_by_answer_that_says_it() -> None:
+    entries = [_entry("sys-03", RETRY_ANSWER), _entry("ppl-04", DESK_ANSWER)]
+
+    def chat(system: str, user: str, max_tokens: int, json_mode: bool = False) -> str:
+        return _qwen_card("재시도 횟수 변경 주의", "재시도를 늘리면 중복 승인 위험이 생긴다.", ["ppl-04"])
+
+    drafts = qwen_extract_cards(chat, entries, [])
+    assert [d.evidence_question_ids for d in drafts] == [["sys-03"]]
+
+
+def test_qwen_keeps_correct_evidence_and_drops_unrelated() -> None:
+    entries = [_entry("sys-03", RETRY_ANSWER), _entry("ppl-04", DESK_ANSWER)]
+
+    def chat(system: str, user: str, max_tokens: int, json_mode: bool = False) -> str:
+        return _qwen_card("고객센터 문의 흐름", "고객센터 상담원이 먼저 받고 티켓을 넘긴다.",
+                          ["ppl-04", "sys-03"])
+
+    drafts = qwen_extract_cards(chat, entries, [])
+    assert [d.evidence_question_ids for d in drafts] == [["ppl-04"]]
+
+
+def test_qwen_drops_card_unrelated_to_any_answer() -> None:
+    entries = [_entry("sys-03", RETRY_ANSWER)]
+
+    def chat(system: str, user: str, max_tokens: int, json_mode: bool = False) -> str:
+        return _qwen_card("주간 회의", "목요일마다 팀 회의록을 작성한다.", ["sys-03"])
+
+    assert qwen_extract_cards(chat, entries, []) == []
 
 
 def test_qwen_provider_error_propagates() -> None:

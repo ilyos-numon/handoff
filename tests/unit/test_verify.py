@@ -15,6 +15,7 @@ from handoff.contracts import (
     ClaimVerdict,
     KBAnswer,
     VerifyOutcome,
+    split_sentences,
 )
 from handoff.kb import NOT_FOUND_MESSAGE, KBEntry, KnowledgeBase
 from handoff.knowledge_store import KnowledgeStore
@@ -258,6 +259,139 @@ def test_qwen_q16_style_related_but_not_answering_is_none() -> None:
     )
     assert outcome.answer is None
     assert outcome.removed == 2
+
+
+Q16 = "정산 배치가 실패하면 손으로 어떻게 복구하나요?"
+Q16_ANSWER = (
+    "근거에 따르면 정산 배치 실패 시 혼자 다시 돌리지 말고 정산 담당자에게 먼저 알려야 합니다. "
+    "손으로 직접 복구하는 절차는 명시되어 있지 않습니다."
+)
+Q16_EVIDENCE = (
+    "매출 집계 배치는 다시 돌려도 안전합니다. "
+    "정산 배치 결과가 이상하면 혼자 다시 돌리지 말고 정산 담당자에게 먼저 알리세요."
+)
+Q17 = "결제 대행사 쪽에 장애가 나면 누구한테 연락해요?"
+Q17_ANSWER = (
+    "결제 대행사 장애 발생 시 결제팀 리드에게 먼저 문의합니다. "
+    "팀 메신저의 결제 개발 채널에 질문을 올리고 리드를 언급하면 됩니다."
+)
+Q17_EVIDENCE = (
+    "막히면 결제팀 리드에게 먼저 묻습니다. 팀 메신저의 결제 개발 채널에 질문을 올리고 "
+    "리드를 언급하면 보통 한 시간 안에 답이 옵니다."
+)
+
+
+def test_qwen_q16_live_shape_disclaimer_claim_is_none() -> None:
+    # S15 실측 qwen 판정 그대로: "명시되어 있지 않습니다" 주장을 supported+answers 로, 근거 null
+    chat = FakeChat(_verdicts_json((True, False, 1), (True, True, None)))
+    outcome = ClaimVerifier(QwenLikeLLM(chat)).verify(Q16, Q16_ANSWER, [_citation(Q16_EVIDENCE)])
+    assert outcome.answer is None
+    assert outcome.removed == 2
+
+
+def test_qwen_disclaimer_claim_forced_unsupported_even_with_citation() -> None:
+    chat = FakeChat(_verdicts_json((True, False, 1), (True, True, 1)))
+    verdicts = qwen_verify_claims(
+        chat, Q16, split_sentences(Q16_ANSWER), [_citation(Q16_EVIDENCE)]
+    )
+    assert (verdicts[1].supported, verdicts[1].answers_question) == (False, False)
+    assert (verdicts[0].supported, verdicts[0].answers_question) == (True, False)
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "복구 절차는 근거에 나와 있지 않습니다.",
+        "연락처는 언급되지 않았습니다.",
+        "구체적인 방법은 명시되지 않았습니다.",
+        "해당 내용은 근거에 없습니다.",
+        "자료에는 관련 절차가 없습니다.",
+    ],
+)
+def test_qwen_disclaimer_variants_never_answer(claim: str) -> None:
+    chat = FakeChat(_verdicts_json((True, True, 1)))
+    verdicts = qwen_verify_claims(chat, Q16, [claim], [_citation(Q16_EVIDENCE)])
+    assert (verdicts[0].supported, verdicts[0].answers_question) == (False, False)
+
+
+def test_qwen_answering_claim_needs_citation() -> None:
+    chat = FakeChat(_verdicts_json((True, True, None), (True, True, 9)))
+    verdicts = qwen_verify_claims(chat, QUERY_HIT, ["금요일 배포는 피합니다.", "정산 배치."], [_citation()])
+    assert [v.answers_question for v in verdicts] == [False, False]
+    assert [v.supported for v in verdicts] == [True, True]
+
+
+def test_qwen_q17_shape_condition_not_in_evidence_is_none() -> None:
+    # q17: 근거는 일반 상황("막히면")만 말하는데 주장이 질문의 상황(대행사 장애)을 붙임
+    chat = FakeChat(_verdicts_json((False, False, None), (True, False, 1)))
+    outcome = ClaimVerifier(QwenLikeLLM(chat)).verify(Q17, Q17_ANSWER, [_citation(Q17_EVIDENCE)])
+    assert outcome.answer is None
+    assert outcome.removed == 2
+
+
+def test_qwen_prompt_rules_for_disclaimer_and_borrowed_condition() -> None:
+    assert "명시되어 있지 않" in VERIFY_SYSTEM
+    assert "일반적인 상황" in VERIFY_SYSTEM and "특정 상황" in VERIFY_SYSTEM
+    assert "citation 이 null 이면 answers_question 은 false" in VERIFY_SYSTEM
+
+
+def _situation_json(situation: object, *items: tuple[bool, bool, object, int | None]) -> str:
+    return json.dumps(
+        {
+            "situation": situation,
+            "verdicts": [
+                {
+                    "index": i,
+                    "supported": s,
+                    "answers_question": a,
+                    "situation_covered": cov,
+                    "citation": c,
+                }
+                for i, (s, a, cov, c) in enumerate(items, start=1)
+            ],
+        }
+    )
+
+
+def test_qwen_situation_not_covered_blocks_answer() -> None:
+    # q17 형태: qwen 이 supported·answers 는 true 로 냈지만 근거가 질문 상황을 다루지 않음
+    chat = FakeChat(
+        _situation_json("결제 대행사 장애가 났을 때 연락 대상", (True, True, False, 1), (True, True, False, 1))
+    )
+    outcome = ClaimVerifier(QwenLikeLLM(chat)).verify(Q17, Q17_ANSWER, [_citation(Q17_EVIDENCE)])
+    assert outcome.answer is None
+    assert outcome.removed == 2
+    assert all(not v.answers_question for v in outcome.claims)
+    assert all(v.supported for v in outcome.claims)
+
+
+def test_qwen_situation_covered_keeps_answer() -> None:
+    chat = FakeChat(_situation_json("금요일 배포를 피하는 이유", (True, True, True, 1), (True, True, True, 1)))
+    outcome = ClaimVerifier(QwenLikeLLM(chat)).verify(QUERY_HIT, ANSWER_MAIN, [_citation()])
+    assert outcome.answer == ANSWER_MAIN
+    assert outcome.removed == 0
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        _situation_json("상황", (True, True, "yes", 1), (True, True, True, 1)),
+        _situation_json("상황", (True, True, None, 1), (True, True, True, 1)),
+        _situation_json(["상황"], (True, True, True, 1), (True, True, True, 1)),
+        '{"situation": "상황", "verdicts": [{"supported": true}]}',
+        '{"situation": "상황"}',
+    ],
+)
+def test_qwen_broken_situation_response_all_false(content: str) -> None:
+    claims = split_sentences(ANSWER_MAIN)
+    verdicts = qwen_verify_claims(FakeChat(content), QUERY_HIT, claims, [_citation()])
+    assert [v.claim for v in verdicts] == claims
+    assert all(not v.supported and not v.answers_question for v in verdicts)
+
+
+def test_qwen_prompt_asks_situation_fields() -> None:
+    assert '"situation"' in VERIFY_SYSTEM
+    assert '"situation_covered"' in VERIFY_SYSTEM
 
 
 def test_qwen_parse_failure_falls_back_to_none() -> None:
