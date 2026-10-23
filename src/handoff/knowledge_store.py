@@ -15,6 +15,7 @@ from handoff.contracts import (
     ArtifactKind,
     ArtifactSection,
     CardType,
+    Certainty,
     DepthJudgement,
     DrillScenario,
     Entity,
@@ -50,7 +51,9 @@ CREATE TABLE IF NOT EXISTS k_depth (id INTEGER PRIMARY KEY AUTOINCREMENT, sessio
   created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS k_cards (id INTEGER PRIMARY KEY AUTOINCREMENT, leaver TEXT NOT NULL, role TEXT NOT NULL,
   session_id TEXT NOT NULL, type TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, entities_json TEXT NOT NULL,
-  confidence REAL NOT NULL, evidence_json TEXT NOT NULL, created_at TEXT NOT NULL);
+  confidence REAL NOT NULL, evidence_json TEXT NOT NULL, created_at TEXT NOT NULL,
+  certainty TEXT NOT NULL DEFAULT 'certain', uncertain_cues_json TEXT NOT NULL DEFAULT '[]',
+  invalidated_when_json TEXT NOT NULL DEFAULT '[]');
 CREATE TABLE IF NOT EXISTS k_gaps (id INTEGER PRIMARY KEY AUTOINCREMENT, leaver TEXT NOT NULL, kind TEXT NOT NULL,
   topic TEXT NOT NULL, detail TEXT NOT NULL, risk TEXT NOT NULL, card_ids_json TEXT NOT NULL,
   entity_ids_json TEXT NOT NULL, queue_item_id TEXT, created_at TEXT NOT NULL);
@@ -71,7 +74,12 @@ _QUEUE_COLS = (
 _DEPTH_COLS = "session_id, question_id, slots_json, missing_json, follow_up_id, created_at"
 _CARD_COLS = (
     "id, leaver, role, session_id, type, title, body, entities_json, confidence, "
-    "evidence_json, created_at"
+    "evidence_json, created_at, certainty, uncertain_cues_json, invalidated_when_json"
+)
+_CARD_EXTRA_COLUMNS = (
+    ("certainty", "certainty TEXT NOT NULL DEFAULT 'certain'"),
+    ("uncertain_cues_json", "uncertain_cues_json TEXT NOT NULL DEFAULT '[]'"),
+    ("invalidated_when_json", "invalidated_when_json TEXT NOT NULL DEFAULT '[]'"),
 )
 _GAP_COLS = (
     "id, leaver, kind, topic, detail, risk, card_ids_json, entity_ids_json, queue_item_id, created_at"
@@ -128,7 +136,8 @@ def _card_from(r: Row) -> KnowledgeCard:
     return KnowledgeCard.model_validate(
         {"id": f"c{r[0]}", "leaver": r[1], "role": r[2], "session_id": r[3], "type": r[4],
          "title": r[5], "body": r[6], "entities": json.loads(str(r[7])), "confidence": r[8],
-         "evidence": json.loads(str(r[9])), "created_at": _dt(r[10])}
+         "evidence": json.loads(str(r[9])), "created_at": _dt(r[10]), "certainty": r[11],
+         "uncertain_cues": json.loads(str(r[12])), "invalidated_when": json.loads(str(r[13]))}
     )
 
 
@@ -174,6 +183,10 @@ class KnowledgeStore:
         self._lock = lock
         with self._lock:
             self._conn.executescript(_SCHEMA)
+            existing = {str(r[1]) for r in self._conn.execute("PRAGMA table_info(k_cards)")}
+            for name, definition in _CARD_EXTRA_COLUMNS:
+                if name not in existing:
+                    self._conn.execute(f"ALTER TABLE k_cards ADD COLUMN {definition}")
             self._conn.commit()
 
     @classmethod
@@ -358,9 +371,11 @@ class KnowledgeStore:
             for c in cards:
                 cur = self._conn.execute(
                     "INSERT INTO k_cards (leaver, role, session_id, type, title, body, entities_json, "
-                    "confidence, evidence_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "confidence, evidence_json, created_at, certainty, uncertain_cues_json, "
+                    "invalidated_when_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (c.leaver, c.role, session_id, c.type, c.title, c.body, _dumps(c.entities),
-                     c.confidence, _evidence_json(c.evidence), now.isoformat()),
+                     c.confidence, _evidence_json(c.evidence), now.isoformat(), c.certainty,
+                     _dumps(c.uncertain_cues), _dumps([w.model_dump() for w in c.invalidated_when])),
                 )
                 ids.append(cur.lastrowid)
             self._conn.commit()
@@ -371,12 +386,16 @@ class KnowledgeStore:
         return [_card_from(r) for r in rows]
 
     def list_cards(self, leaver: str, type: CardType | None = None,
-                   min_confidence: float = 0.0) -> list[KnowledgeCard]:
+                   min_confidence: float = 0.0,
+                   certainty: Certainty | None = None) -> list[KnowledgeCard]:
         sql = f"SELECT {_CARD_COLS} FROM k_cards WHERE leaver = ? AND confidence >= ?"
         params: list[object] = [leaver, min_confidence]
         if type is not None:
             sql += " AND type = ?"
             params.append(type)
+        if certainty is not None:
+            sql += " AND certainty = ?"
+            params.append(certainty)
         sql += " ORDER BY id ASC"
         with self._lock:
             rows = self._conn.execute(sql, params).fetchall()

@@ -1,3 +1,4 @@
+import sqlite3
 import threading
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -9,6 +10,7 @@ from handoff.contracts import (
     DepthJudgement,
     EntityDraft,
     Evidence,
+    InvalidationCondition,
     NewArtifact,
     NewCard,
     NewDrill,
@@ -287,3 +289,75 @@ def test_add_and_get_drill(ks: KnowledgeStore) -> None:
     assert ks.get_drill("d1") == d
     for bad in ("d", "a1", "d2", "dx"):
         assert ks.get_drill(bad) is None
+
+
+# ---- 확신도·불확실 표현·유통기한 (3차)
+_PHASE2_K_CARDS = (
+    "CREATE TABLE k_cards (id INTEGER PRIMARY KEY AUTOINCREMENT, leaver TEXT NOT NULL, role TEXT NOT NULL, "
+    "session_id TEXT NOT NULL, type TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, "
+    "entities_json TEXT NOT NULL, confidence REAL NOT NULL, evidence_json TEXT NOT NULL, "
+    "created_at TEXT NOT NULL)"
+)
+
+
+def test_card_new_fields_roundtrip(ks: KnowledgeStore) -> None:
+    card = _card().model_copy(update={
+        "certainty": "uncertain",
+        "uncertain_cues": ["아마", "확실하지 않"],
+        "invalidated_when": [InvalidationCondition(event="vendor_changed", condition="PG 업체가 바뀌면")],
+    })
+    saved = ks.replace_session_cards("s1", [card], T0)[0]
+    assert saved.certainty == "uncertain"
+    assert saved.uncertain_cues == ["아마", "확실하지 않"]
+    assert [(c.event, c.condition) for c in saved.invalidated_when] == [("vendor_changed", "PG 업체가 바뀌면")]
+    got = ks.get_card(saved.id)
+    assert got is not None
+    assert got.certainty == "uncertain"
+    assert got.uncertain_cues == ["아마", "확실하지 않"]
+    assert got.invalidated_when == saved.invalidated_when
+
+
+def test_card_new_fields_default(ks: KnowledgeStore) -> None:
+    saved = ks.replace_session_cards("s1", [_card()], T0)[0]
+    assert saved.certainty == "certain"
+    assert saved.uncertain_cues == []
+    assert saved.invalidated_when == []
+
+
+def test_phase2_db_gets_new_columns_automatically(tmp_path: Path) -> None:
+    db = tmp_path / "old.sqlite3"
+    conn = sqlite3.connect(db)
+    conn.execute(_PHASE2_K_CARDS)
+    conn.execute(
+        "INSERT INTO k_cards (leaver, role, session_id, type, title, body, entities_json, confidence, "
+        "evidence_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ("alice", "backend_developer", "s1", "procedure", "배포 절차", "본문", "[]", 0.8,
+         '[{"session_id": "s1", "question_id": "sys-01", "session_number": 1, "excerpt": "확인"}]',
+         T0.isoformat()),
+    )
+    conn.commit()
+    conn.close()
+    store = SessionStore(db)
+    ks = KnowledgeStore.from_session_store(store)
+    KnowledgeStore.from_session_store(store)  # 두 번째 생성도 안전
+    cols = {r[1] for r in store.shared()[0].execute("PRAGMA table_info(k_cards)")}
+    assert {"certainty", "uncertain_cues_json", "invalidated_when_json"} <= cols
+    cards = ks.list_cards("alice")
+    assert len(cards) == 1
+    assert cards[0].certainty == "certain"
+    assert cards[0].uncertain_cues == []
+    assert cards[0].invalidated_when == []
+    assert [c.id for c in ks.list_cards("alice", certainty="certain")] == [cards[0].id]
+    store.close()
+
+
+def test_list_cards_certainty_filter(ks: KnowledgeStore) -> None:
+    sure = _card(title="확실")
+    unsure = _card(title="불확실", type="pitfall", confidence=0.9).model_copy(
+        update={"certainty": "uncertain", "uncertain_cues": ["아마"]})
+    cards = ks.replace_session_cards("s1", [sure, unsure], T0)
+    assert [c.id for c in ks.list_cards("alice", certainty="certain")] == [cards[0].id]
+    assert [c.id for c in ks.list_cards("alice", certainty="uncertain")] == [cards[1].id]
+    assert [c.id for c in ks.list_cards("alice", certainty=None)] == [cards[0].id, cards[1].id]
+    assert ks.list_cards("alice", type="procedure", certainty="uncertain") == []
+    assert [c.id for c in ks.list_cards("alice", min_confidence=0.85, certainty="uncertain")] == [cards[1].id]
