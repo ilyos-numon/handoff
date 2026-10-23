@@ -96,6 +96,21 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .lowest .axis-label { font-weight: 700; color: #a12b2b; }
 .lowest .axis-bar > span { background: #d9822b; }
 .lowest-mark { color: #a12b2b; font-size: 0.85rem; margin-left: 6px; white-space: nowrap; }
+.axis-extra, .lowest-mark { grid-column: 2 / -1; margin-left: 0; }
+.axis-extra { color: #2f6fab; font-size: 0.85rem; }
+
+/* manager report: same width as session/chat page */
+main.card { max-width: 720px; margin: 16px auto; }
+main.card h2 { margin-top: 16px; }
+.report-form { display: flex; gap: 8px; margin-top: 8px; }
+.report-form input[type="text"] { flex: 1; }
+.report-status { color: #52606d; font-size: 0.92rem; min-height: 1.5em; }
+.report-list { margin: 0; padding-left: 20px; }
+.report-list-none { color: #9aa5b1; }
+.artifact { margin-top: 8px; padding: 8px 12px; border: 1px solid #dde3e9; border-radius: 8px; }
+.artifact-title { margin: 0; font-size: 1rem; }
+.artifact-heading { margin: 8px 0 2px; font-size: 0.95rem; }
+.artifact-body { margin: 0; white-space: pre-wrap; word-break: break-word; }
 
 /* successor chat */
 .bot-answer {
@@ -113,6 +128,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @media (max-width: 480px) {
   .page { padding: 10px; }
+  main.card { margin: 10px; }
   .axis-row { grid-template-columns: 5.5em 1fr 3.5em; gap: 6px; }
   .msg, .bot-answer { max-width: 100%; }
 }

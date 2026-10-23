@@ -10,10 +10,42 @@
   <main class="card">
     <h1 id="report-title">인수인계 진행 상황</h1>
     <p id="items-total-report"></p>
+    <p id="report-error" class="error hidden"></p>
     <section id="axes"></section>
     <h2>비어 있는 주제</h2>
     <ul id="empty-topics"></ul>
-    <p id="report-error" class="error hidden"></p>
+
+    <h2>관리</h2>
+    <div class="button-row">
+      <button id="sources-mock" type="button" class="secondary">모의 업무 자료 불러오기</button>
+      <button id="questions-generate" type="button" class="secondary">자료로 질문 만들기</button>
+      <button id="premortem-add" type="button" class="secondary">사전 부검 질문 넣기</button>
+      <button id="gaps-refresh" type="button" class="secondary">빈 구멍 다시 찾기</button>
+    </div>
+    <form id="priority-form" class="report-form">
+      <input id="priority-input" type="text" maxlength="300" placeholder="퇴사자에게 먼저 물어볼 질문">
+      <button id="priority-send" type="submit" class="primary">우선 질문 지정</button>
+    </form>
+    <p id="report-status" class="report-status"></p>
+
+    <h2>질문 큐</h2>
+    <ul id="queue" class="report-list"></ul>
+
+    <h2>빈 구멍</h2>
+    <ul id="gaps" class="report-list"></ul>
+
+    <h2>아무도 확실히 모르는 영역</h2>
+    <ul id="unknown-areas" class="report-list"></ul>
+
+    <h2>산출물</h2>
+    <div id="artifact-buttons" class="button-row">
+      <button type="button" class="secondary" data-kind="runbook">운영 런북</button>
+      <button type="button" class="secondary" data-kind="onboarding_30d">30일 온보딩 플랜</button>
+      <button type="button" class="secondary" data-kind="pitfalls_top10">함정 Top10</button>
+      <button type="button" class="secondary" data-kind="adr">결정 기록(ADR)</button>
+      <button type="button" class="secondary" data-kind="premortem">사전 부검: 먼저 터질 일 Top5</button>
+    </div>
+    <section id="artifacts"></section>
   </main>
   <script src="/static/report.js"></script>
 </body>
