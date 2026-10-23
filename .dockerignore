@@ -1,0 +1,32 @@
+# 비밀값·로컬 데이터
+.env
+.env.*
+data/
+demo-data/
+out/
+
+# 작업 기록·저장소 메타
+.ai/
+.git/
+.claude/
+openspec/
+
+# 개발 산출물
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+test-results/
+playwright-report/
+node_modules/
+*.log
+
+# 이미지에 필요 없는 것 (Dockerfile 은 pyproject.toml·uv.lock·README.md·src/ 만 쓴다)
+tests/
+eval/
+docs/
+deploy/
+scripts/
