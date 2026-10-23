@@ -62,7 +62,7 @@ class CardService:
                     session_id=session_id,
                     question_id=q,
                     session_number=row.number,
-                    excerpt=by_question[q][:EXCERPT_MAX],
+                    excerpt=scrub_contacts(by_question[q])[:EXCERPT_MAX],
                 )
                 for q in qids
             ]

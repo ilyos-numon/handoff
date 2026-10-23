@@ -18,6 +18,7 @@ from handoff.contracts import (
 from handoff.kb import KBEntry
 from handoff.knowledge_store import KnowledgeStore
 from handoff.llm_tasks.cards import fake_extract_cards, qwen_extract_cards
+from handoff.privacy import find_pii
 from handoff.providers import FakeLLM, ProviderError
 from handoff.routes_cards import router
 from handoff.store import SessionRow, SessionStore
@@ -196,6 +197,17 @@ def test_extract_masks_contacts(sessions: SessionStore, kstore: KnowledgeStore) 
     for card in cards:
         assert "ops@example.com" not in card.body + card.title
         assert "010-1234-5678" not in card.body + card.title
+
+
+def test_extract_masks_contacts_in_evidence_excerpt(
+    sessions: SessionStore, kstore: KnowledgeStore
+) -> None:
+    cards = _service(sessions, kstore).extract_for_session("s1")
+    follow = [e for c in cards for e in c.evidence if e.question_id == "sys-01-f1"]
+    assert follow
+    for card in cards:
+        for ev in card.evidence:
+            assert find_pii(ev.excerpt) == []
 
 
 def test_extract_drops_drafts_without_evidence(sessions: SessionStore, kstore: KnowledgeStore) -> None:
