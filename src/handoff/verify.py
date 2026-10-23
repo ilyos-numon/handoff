@@ -5,11 +5,13 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from handoff.contracts import (
     DEFAULT_ROLE,
     AskRequest,
     AskResponse,
+    AskRoute,
     Citation,
     ClaimVerdict,
     QueueItem,
@@ -20,6 +22,10 @@ from handoff.kb import KnowledgeBase
 from handoff.knowledge_store import KnowledgeStore
 from handoff.providers import LLM, ProviderError
 from handoff.question_tree import Axis
+from handoff.signals import uncertain_cues
+
+if TYPE_CHECKING:
+    from handoff.routing import QuestionRouter
 
 SUCCESSOR_REASON = "후임 미답 질문"
 
@@ -78,15 +84,26 @@ def guess_axis(text: str) -> Axis:
 
 class SuccessorService:
     def __init__(
-        self, store: KnowledgeStore, clock: Callable[[], datetime] = utc_now
+        self,
+        store: KnowledgeStore,
+        clock: Callable[[], datetime] = utc_now,
+        *,
+        router: QuestionRouter | None = None,
     ) -> None:
         self._store = store
         self._clock = clock
+        self._router = router
 
     def ask(self, kb: KnowledgeBase, req: AskRequest, role: str = DEFAULT_ROLE) -> AskResponse:
         ans = kb.query(req.question)
         if ans.found:
-            return AskResponse(answer=ans, queued=None)
+            uncertain = any(uncertain_cues(c.excerpt) for c in ans.citations)
+            return AskResponse(
+                answer=ans,
+                queued=None,
+                route=None,
+                certainty="uncertain" if uncertain else "certain",
+            )
         item, _ = self._store.enqueue(
             req.leaver,
             role,
@@ -97,7 +114,13 @@ class SuccessorService:
             None,
             self._clock(),
         )
-        return AskResponse(answer=ans, queued=item)
+        route: AskRoute | None = None
+        if self._router is not None:
+            try:
+                route = self._router.route(req.question, req.leaver, role)
+            except ProviderError:
+                route = None
+        return AskResponse(answer=ans, queued=item, route=route, certainty=None)
 
     def list(self, leaver: str) -> list[QueueItem]:
         return self._store.list_queue(leaver, source="successor")

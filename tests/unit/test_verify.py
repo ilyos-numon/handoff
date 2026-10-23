@@ -13,7 +13,9 @@ from handoff.contracts import (
     AskRequest,
     Citation,
     ClaimVerdict,
+    Evidence,
     KBAnswer,
+    NewCard,
     VerifyOutcome,
     split_sentences,
 )
@@ -22,6 +24,7 @@ from handoff.knowledge_store import KnowledgeStore
 from handoff.llm_tasks.verify import VERIFY_SYSTEM, fake_verify_claims, qwen_verify_claims
 from handoff.providers import FakeEmbedder, FakeLLM, ProviderError
 from handoff.routes_successor import router
+from handoff.routing import QuestionRouter
 from handoff.store import SessionStore
 from handoff.verify import SUCCESSOR_REASON, ClaimVerifier, SuccessorService, guess_axis
 
@@ -532,3 +535,83 @@ def test_route_successor_questions_only_successor_source(
 ) -> None:
     store.enqueue("loop", "backend_developer", "gap", "systems", "다른 질문?", "gap", None, NOW)
     assert _client(store, empty_kb).get("/leavers/loop/successor-questions").json() == []
+
+
+# ---- S7: 라우팅·근거 확신도
+def _contact_card() -> NewCard:
+    body = "재고 동기화 문제는 물류팀 리드에게 먼저 묻습니다."
+    return NewCard(
+        leaver="loop",
+        role="backend_developer",
+        session_id="sess-1",
+        type="contact",
+        title="재고 동기화 연락처",
+        body=body,
+        entities=[],
+        confidence=0.8,
+        evidence=[Evidence(session_id="sess-1", question_id="ppl-01", session_number=1, excerpt=body)],
+    )
+
+
+def _router(store: KnowledgeStore, llm: FakeLLM | None = None) -> QuestionRouter:
+    sessions = SessionStore(":memory:")
+    return QuestionRouter(llm or FakeLLM(), store, sessions)
+
+
+def test_service_found_certain_without_route(store: KnowledgeStore) -> None:
+    svc = SuccessorService(store, router=_router(store))
+    res = svc.ask(StubKB(FOUND), AskRequest(question=QUERY_HIT, leaver="loop"))  # type: ignore[arg-type]
+    assert res.route is None
+    assert res.certainty == "certain"
+    assert res.queued is None
+
+
+def test_service_found_uncertain_excerpt(store: KnowledgeStore) -> None:
+    found = KBAnswer(
+        found=True,
+        answer=ANSWER_MAIN,
+        citations=[_citation(), _citation("아마 정산 배치가 먼저 실패했을 겁니다.")],
+    )
+    res = SuccessorService(store).ask(StubKB(found), AskRequest(question=QUERY_HIT, leaver="loop"))  # type: ignore[arg-type]
+    assert res.certainty == "uncertain"
+    assert res.route is None
+
+
+def test_service_not_found_routes_to_role(store: KnowledgeStore) -> None:
+    store.replace_session_cards("sess-1", [_contact_card()], NOW)
+    svc = SuccessorService(store, clock=lambda: NOW, router=_router(store))
+    req = AskRequest(question="재고 동기화 문제는 누구에게 묻나요?", leaver="loop")  # type: ignore[arg-type]
+    res = svc.ask(StubKB(NOT_FOUND), req)
+    assert res.queued is not None
+    assert res.certainty is None
+    assert res.route is not None
+    assert res.route.ask_role == "물류팀 리드"
+    assert res.route.basis == "contact_card"
+    assert res.route.card_ids == ["c1"]
+
+
+def test_service_not_found_no_candidates_route_none(store: KnowledgeStore) -> None:
+    svc = SuccessorService(store, router=_router(store))
+    res = svc.ask(StubKB(NOT_FOUND), AskRequest(question=QUERY_MISS, leaver="loop"))  # type: ignore[arg-type]
+    assert res.queued is not None
+    assert res.route is None and res.certainty is None
+
+
+def test_service_router_provider_error_route_none(store: KnowledgeStore) -> None:
+    class BrokenRouter:
+        def route(self, question: str, leaver: str, role: str) -> None:
+            raise ProviderError("down")
+
+    svc = SuccessorService(store, router=BrokenRouter())  # type: ignore[arg-type]
+    res = svc.ask(StubKB(NOT_FOUND), AskRequest(question=QUERY_MISS, leaver="loop"))  # type: ignore[arg-type]
+    assert res.queued is not None
+    assert res.route is None
+
+
+def test_service_without_router_keeps_old_behavior(store: KnowledgeStore) -> None:
+    store.replace_session_cards("sess-1", [_contact_card()], NOW)
+    svc = SuccessorService(store, lambda: NOW)
+    req = AskRequest(question="재고 동기화 문제는 누구에게 묻나요?", leaver="loop")  # type: ignore[arg-type]
+    res = svc.ask(StubKB(NOT_FOUND), req)
+    assert res.queued is not None and res.queued.created_at == NOW
+    assert res.route is None and res.certainty is None
