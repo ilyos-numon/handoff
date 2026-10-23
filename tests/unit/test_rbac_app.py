@@ -16,16 +16,18 @@ from handoff.rbac.tokens import Principal, Role, issue_invite
 SECRET = "t"
 BUILTIN_PATHS = {"/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"}
 
-# PLAN §4.4: (method, template) -> roles allowed among leaver(L), successor(S), manager(M).
+# PLAN §4.4: (method, template) -> roles allowed among leaver(L), successor(S), manager(M),
+# admin(A). Public rows allow every role, admin included (admin inherits anonymous).
 ALL = "LSM"
+PUB = "LSMA"
 POLICY_TABLE: dict[tuple[str, str], str] = {
-    ("GET", "/health"): ALL,
-    ("GET", "/"): ALL,
-    ("GET", "/chat"): ALL,
-    ("GET", "/report"): ALL,
-    ("GET", "/auth/accept"): ALL,
-    ("GET", "/auth/me"): ALL,
-    ("POST", "/auth/logout"): ALL,
+    ("GET", "/health"): PUB,
+    ("GET", "/"): PUB,
+    ("GET", "/chat"): PUB,
+    ("GET", "/report"): PUB,
+    ("GET", "/auth/accept"): PUB,
+    ("GET", "/auth/me"): PUB,
+    ("POST", "/auth/logout"): PUB,
     ("GET", "/question-trees/{role}"): ALL,
     ("POST", "/sessions"): "L",
     ("GET", "/sessions/{session_id}"): "L",
@@ -58,9 +60,13 @@ POLICY_TABLE: dict[tuple[str, str], str] = {
     ("POST", "/drills/{drill_id}/answers"): "S",
     ("POST", "/kb/fence"): "S",
     ("POST", "/leavers/{leaver}/premortem/questions"): "M",
+    ("GET", "/admin"): PUB,
+    ("GET", "/admin/leavers"): "A",
+    ("POST", "/admin/leavers"): "A",
+    ("POST", "/admin/leavers/{leaver_id}/invites"): "A",
 }
 PUBLIC = {key for key, scope in ROUTE_SCOPES.items() if scope == "public"}
-LETTER: dict[Role, str] = {"leaver": "L", "successor": "S", "manager": "M"}
+LETTER: dict[Role, str] = {"leaver": "L", "successor": "S", "manager": "M", "admin": "A"}
 
 
 def _settings(data_dir: Path, *, auth: bool) -> Settings:

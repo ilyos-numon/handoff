@@ -46,6 +46,10 @@ p, successor, /drills/{drill_id}, GET
 p, successor, /drills/{drill_id}/answers, POST
 p, successor, /kb/fence, POST
 p, manager, /leavers/{leaver}/premortem/questions, POST
+p, anonymous, /admin, GET
+p, admin, /admin/leavers, GET
+p, admin, /admin/leavers, POST
+p, admin, /admin/leavers/{leaver_id}/invites, POST
 g, leaver, anonymous
 g, successor, anonymous
 g, manager, anonymous

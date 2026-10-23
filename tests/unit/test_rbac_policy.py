@@ -81,6 +81,10 @@ TABLE: list[tuple[str, str, str, frozenset[str]]] = [
     ("POST", "/drills/{drill_id}/answers", "drill", frozenset({"successor"})),
     ("POST", "/kb/fence", "body", frozenset({"successor"})),
     ("POST", "/leavers/{leaver}/premortem/questions", "path", frozenset({"manager"})),
+    ("GET", "/admin", "public", frozenset(ALL)),
+    ("GET", "/admin/leavers", "none", frozenset({"admin"})),
+    ("POST", "/admin/leavers", "none", frozenset({"admin"})),
+    ("POST", "/admin/leavers/{leaver_id}/invites", "none", frozenset({"admin"})),
 ]
 
 CASES = [

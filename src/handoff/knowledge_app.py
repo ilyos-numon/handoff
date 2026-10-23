@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
 from handoff import (
+    admin,
     routes_artifacts,
     routes_cards,
     routes_depth,
@@ -16,6 +17,7 @@ from handoff import (
     routes_sources,
     routes_successor,
 )
+from handoff.admin import LeaverRegistry
 from handoff.artifacts import ArtifactService
 from handoff.cards import CardService
 from handoff.config import Settings
@@ -52,6 +54,8 @@ class KnowledgeServices:
     router: QuestionRouter
     premortem: PremortemService
     auth: AuthConfig | None = None
+    admin: LeaverRegistry | None = None
+    public_url: str = ""
 
 
 def build_knowledge(settings: Settings, llm: LLM, session_store: SessionStore) -> KnowledgeServices:
@@ -80,6 +84,8 @@ def build_knowledge(settings: Settings, llm: LLM, session_store: SessionStore) -
         router=router,
         premortem=PremortemService(store),
         auth=build_auth(settings),
+        admin=LeaverRegistry(settings.data_dir / "admin.db") if settings.auth else None,
+        public_url=settings.public_url,
     )
 
 
@@ -105,5 +111,6 @@ def include_knowledge_routers(app: FastAPI) -> None:
         routes_drill,
         routes_fence,
         routes_premortem,
+        admin,
     ):
         app.include_router(module.router, dependencies=[Depends(authorize)])
