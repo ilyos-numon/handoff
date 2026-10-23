@@ -14,7 +14,7 @@ from handoff.contracts import (
     KnowledgeCard,
     NewCard,
 )
-from handoff.gaps import GapService
+from handoff.gaps import GapService, unknown_areas
 from handoff.kb import KBEntry
 from handoff.knowledge_store import KnowledgeStore
 from handoff.llm_tasks.gaps import fake_find_contradictions, qwen_find_contradictions
@@ -380,3 +380,84 @@ def test_route_refresh_provider_error_is_503() -> None:
     r = _client(Down()).post(f"/leavers/{LEAVER}/gaps/refresh")
     assert r.status_code == 503
     assert r.json() == {"detail": "provider unavailable"}
+
+
+# ---- 아무도 확실히 모르는 영역
+def _uc(id: str, entities: list[str], cues: list[str], title: str = "카드",
+        certainty: str = "uncertain") -> KnowledgeCard:
+    return KnowledgeCard.model_validate({
+        **_new_card("s1", "본문입니다.", entities, title=title).model_dump(), "id": id,
+        "created_at": T0, "certainty": certainty, "uncertain_cues": cues})
+
+
+def _uncertain_new_card(session_id: str, body: str, entities: list[str], cues: list[str],
+                        title: str = "카드") -> NewCard:
+    return _new_card(session_id, body, entities, title=title).model_copy(
+        update={"certainty": "uncertain", "uncertain_cues": cues})
+
+
+def test_unknown_areas_groups_same_entity() -> None:
+    areas = unknown_areas([
+        _uc("c3", ["정산 배치"], ["모르겠"]),
+        _uc("c1", ["정산 배치", "결제 API"], ["전임자가", "아마"]),
+    ])
+    assert len(areas) == 1
+    area = areas[0]
+    assert area.topic == "정산 배치"
+    assert area.card_ids == ["c1", "c3"]
+    assert area.cues == ["아마", "모르겠", "전임자가"]
+    assert area.detail == ("답변에 불확실 표현(아마, 모르겠, 전임자가)이 있어 "
+                           "아무도 확실히 모르는 영역입니다.")
+
+
+def test_unknown_areas_without_entities_uses_title() -> None:
+    areas = unknown_areas([_uc("c2", [], ["확실하지 않"], title="야간 재처리 기준")])
+    assert [(a.topic, a.card_ids, a.cues) for a in areas] == [
+        ("야간 재처리 기준", ["c2"], ["확실하지 않"])]
+
+
+def test_unknown_areas_empty_without_uncertain_cards() -> None:
+    assert unknown_areas([]) == []
+    assert unknown_areas([_uc("c1", ["승인 서버"], [], certainty="certain")]) == []
+
+
+def test_unknown_areas_order_by_first_card_id_numeric() -> None:
+    areas = unknown_areas([
+        _uc("c10", ["B"], ["아마"]),
+        _uc("c2", ["A"], ["아마"]),
+        _uc("c9", ["B"], ["기억이 안"]),
+        _uc("c5", ["승인 서버"], [], certainty="certain"),
+    ])
+    assert [(a.topic, a.card_ids) for a in areas] == [("A", ["c2"]), ("B", ["c9", "c10"])]
+    assert areas[1].cues == ["아마", "기억이 안"]
+
+
+def test_refresh_and_report_fill_unknown_areas_without_queue(
+        ks: KnowledgeStore, sessions: SessionStore) -> None:
+    _entity(ks, "정산 배치", "job")
+    saved = ks.replace_session_cards("s1", [
+        _uncertain_new_card("s1", "아마 새벽에 돕니다.", ["정산 배치"], ["아마"]),
+        _uncertain_new_card("s1", "전임자가 만든 것 같습니다.", ["정산 배치"], ["전임자가"]),
+        _new_card("s1", "실패하면 재실행합니다.", ["정산 배치"]),
+    ], T0)
+    service = _service(ks, sessions)
+    report = service.refresh(LEAVER, ROLE)
+    assert [(a.topic, a.card_ids, a.cues) for a in report.unknown_areas] == [
+        ("정산 배치", [saved[0].id, saved[1].id], ["아마", "전임자가"])]
+    assert all(q.reason.startswith("빈 구멍:") for q in ks.list_queue(LEAVER))
+    assert service.report(LEAVER).unknown_areas == report.unknown_areas
+    assert all(g.kind != "unknown" for g in ks.list_gaps(LEAVER))
+
+
+def test_routes_unknown_areas_have_no_person_keys(ks: KnowledgeStore, sessions: SessionStore) -> None:
+    ks.replace_session_cards("s1", [
+        _uncertain_new_card("s1", "확실하지 않습니다.", [], ["확실하지 않"], title="권한 회수 기준")], T0)
+    client = _client(_service(ks, sessions))
+    body = client.post(f"/leavers/{LEAVER}/gaps/refresh", params={"role": ROLE}).json()
+    assert [a["topic"] for a in body["unknown_areas"]] == ["권한 회수 기준"]
+    assert body["queued"] == []
+    got = client.get(f"/leavers/{LEAVER}/gaps").json()
+    assert got["unknown_areas"] == body["unknown_areas"]
+    forbidden = {"score", "person", "owner", "rank", "grade"}
+    assert not _all_keys(body) & forbidden
+    assert not _all_keys(got) & forbidden

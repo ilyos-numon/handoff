@@ -18,10 +18,12 @@ from handoff.contracts import (
     QueueItem,
     QueueSource,
     QueueStatus,
+    UnknownArea,
 )
 from handoff.llm_tasks.gaps import fake_find_contradictions
 from handoff.providers import ProviderError
 from handoff.question_tree import Axis
+from handoff.signals import UNCERTAIN_CUES
 
 if TYPE_CHECKING:
     from handoff.knowledge_store import KnowledgeStore
@@ -46,6 +48,26 @@ GAP_QUESTION_TEMPLATES: dict[GapKind, str] = {
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+def unknown_areas(cards: list[KnowledgeCard]) -> list[UnknownArea]:
+    uncertain = sorted(
+        (c for c in cards if c.certainty == "uncertain"), key=lambda c: int(c.id[1:])
+    )
+    groups: dict[str, list[KnowledgeCard]] = {}
+    for c in uncertain:
+        groups.setdefault(c.entities[0] if c.entities else c.title, []).append(c)
+    areas: list[UnknownArea] = []
+    for topic, group in groups.items():
+        found = {cue for c in group for cue in c.uncertain_cues}
+        cues = [cue for cue in UNCERTAIN_CUES if cue in found]
+        areas.append(UnknownArea(
+            topic=topic,
+            card_ids=[c.id for c in group],
+            cues=cues,
+            detail=f"답변에 불확실 표현({', '.join(cues)})이 있어 아무도 확실히 모르는 영역입니다.",
+        ))
+    return areas
 
 
 class GapService:
@@ -145,13 +167,16 @@ class GapService:
             gaps.append(gap.model_copy(update={"queue_item_id": item.id}))
 
         saved = self._store.replace_gaps(leaver, gaps, now)
-        return GapReport(leaver=leaver, gaps=saved, queued=queued)
+        return GapReport(
+            leaver=leaver, gaps=saved, queued=queued, unknown_areas=unknown_areas(cards)
+        )
 
     def report(self, leaver: str) -> GapReport:
         return GapReport(
             leaver=leaver,
             gaps=self._store.list_gaps(leaver),
             queued=self._store.list_queue(leaver, source="gap"),
+            unknown_areas=unknown_areas(self._store.list_cards(leaver)),
         )
 
     def queue(
