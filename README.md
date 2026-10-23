@@ -62,6 +62,9 @@ uv sync
 | `HANDOFF_QUEUE_PER_SESSION` | `2` | 세션마다 질문 큐에서 먼저 출제할 항목 수 (정수 ≥ 0) |
 | `HANDOFF_VERIFY_CLAIMS` | `on` | 지식베이스 답의 주장 단위 검증. `on` 또는 `off` 만 허용, 그 밖의 값이면 시작 시 오류 |
 | `HANDOFF_TACIT_FOLLOWUPS` | `on` | 암묵지 신호어("그냥"·"감으로"·"보통"·"경험상"·"느낌")가 든 답에 판단 기준을 묻는 꼬리 질문을 먼저 냄. 상한은 `HANDOFF_DEPTH_MAX_FOLLOWUPS` 와 공유. `on` 또는 `off` 만 허용 |
+| `HANDOFF_AUTH` | `on` | 초대 링크 역할 인증. `on` 이면 로그인(초대 링크) 없이 API 를 부르면 401, 역할 밖이면 403. `off` 면 인증 없이 모든 API 가 열린다 (평가 도구·옛 API 예시용). `on` 또는 `off` 만 허용 |
+| `HANDOFF_AUTH_SECRET` | (없음) | 초대 링크·로그인 쿠키 서명 키. 비우면 `<HANDOFF_DATA_DIR>/auth_secret` 파일을 읽고, 없으면 무작위로 만들어 저장한다 (권한 600) |
+| `HANDOFF_INVITE_TTL_HOURS` | `72` | 초대 링크 유효 시간(시간, 정수 ≥ 1) |
 
 qwen 채팅 요청은 `enable_thinking=false` 로 보낸다 (추론 모드를 끄고 응답 시간을 줄인다).
 
@@ -77,16 +80,53 @@ uv run --env-file .env uvicorn handoff.main:create_app --factory --port 8780
 ```
 준비 확인: `curl -sf http://localhost:8780/health` → `{"status":"ok"}`
 
+인증 없이 띄우기 (평가 도구, 아래 curl 예시를 그대로 쓸 때):
+```bash
+HANDOFF_AUTH=off uv run uvicorn handoff.main:create_app --factory --port 8780
+```
+
+### 역할과 초대 링크
+서버는 기본으로 인증을 켠 채 뜬다 (`HANDOFF_AUTH=on`). 계정·비밀번호·이름·이메일은 받지 않는다. 사람마다 역할 하나와 퇴사자 id 하나를 담은 서명된 초대 링크를 만들어 건네면, 링크를 연 브라우저에 로그인 쿠키(`handoff_session`, HttpOnly, 7일)가 붙고 그 역할의 화면으로 이동한다.
+
+초대 링크 만들기 (서버와 같은 `HANDOFF_DATA_DIR`·`HANDOFF_AUTH_SECRET` 으로 실행해야 서버가 받아 준다):
+```bash
+uv run python -m handoff.rbac.cli invite --role leaver --leaver default
+uv run python -m handoff.rbac.cli invite --role successor --leaver default
+uv run python -m handoff.rbac.cli invite --role manager --leaver default
+```
+- `--role` 은 `leaver`(퇴사자)·`successor`(후임)·`manager`(팀장), `--leaver` 는 `^[a-z0-9_-]{1,40}$`. 다른 주소로 띄웠으면 `--base-url` 을 준다 (기본 `http://localhost:8780`).
+- 출력은 `http://localhost:8780/auth/accept?token=...` 한 줄이다. 72시간(`HANDOFF_INVITE_TTL_HOURS`) 동안 여러 번 쓸 수 있고 개별 폐기는 없다. 전부 무효로 하려면 `auth_secret` 파일을 지우거나 `HANDOFF_AUTH_SECRET` 을 바꾸고 서버를 재시작한다.
+- 지금 역할 확인 `GET /auth/me`, 로그아웃 `POST /auth/logout`.
+- 같은 브라우저 창들은 쿠키를 공유한다. 세 역할을 한 번에 보려면 창 3개를 서로 다른 쿠키 저장소로 연다 (일반 창 / 시크릿 창 / 다른 브라우저).
+- 로그인 쿠키는 localhost 시연용으로 HTTPS 전용 표시 없이 나간다. 실제 운영은 HTTPS 뒤에 두는 것을 전제로 한다.
+- 처음부터 끝까지 따라 하는 3역할 시연 순서는 [docs/demo-scenario.md](docs/demo-scenario.md) 에 있다.
+
+역할별로 열리는 범위 (정책 파일 `src/handoff/rbac/policy.csv`, 정책에 없는 경로는 거부):
+
+| 역할 | 할 수 있는 것 | 할 수 없는 것 |
+|------|---------------|---------------|
+| 퇴사자 | 자기 세션 시작·답변·종료, 자기 커버리지·카드·자료 목록·산출물 보기, 답변 깊이·암묵지 판정 | 후임 질문, 다른 퇴사자 데이터 |
+| 후임 | 지식베이스 질문(`/kb/ask`)·울타리 질문, 카드·at-risk·산출물 보기, 장애 훈련 | 세션 답변 원문·요약, 큐 조작, 다른 퇴사자 지식 |
+| 팀장 | 커버리지·빈 구멍·모르는 영역·질문 큐·자료 목록·at-risk·산출물 보기, 자료 적재·질문 생성·사전 부검 질문·우선 질문 지정·산출물 생성 | **답변 원문·세션 요약·답변별 깊이·카드 목록·훈련 결과** (감시·평가에 쓰이지 않게 막는다) |
+
+- 모든 역할은 초대에 적힌 퇴사자 id 의 데이터만 본다. 경로·쿼리·본문의 `leaver` 나 세션·훈련의 퇴사자가 다르면 403 이고, 본문을 읽을 수 없으면 거부한다(fail-closed).
+- 지식베이스 검색은 퇴사자 id 로 걸러진다. 답과 발췌의 이메일·전화번호는 저장 전과 응답 직전에 가린다.
+- 옛 API `POST /kb/query` 는 인증을 켜면 모든 역할에 403 이다. 후임 채팅은 `/kb/ask` 를 쓴다.
+
 ### 화면
 | 주소 | 사용자 | 내용 |
 |------|--------|------|
-| `http://localhost:8780/?leaver=<id>` | 퇴사자 | 세션 시작, 질문에 답하기, 남은 시간, 종료 시 오늘 요약 3줄 (`leaver` 생략 시 `default`) |
-| `http://localhost:8780/chat` | 후임 | 지식베이스에 질문하고 근거(세션 회차·축·발췌)와 함께 답 받기 |
-| `http://localhost:8780/report?leaver=<id>` | 팀장 | 네 축별 커버리지 막대, 가장 비어 있는 축 표시, 빈 주제 목록 |
+| `http://localhost:8780/` | 퇴사자 | 세션 시작, 질문에 답하기(큐에서 온 질문은 출처 표시: 팀장 우선 지정·후임 질문·사전 부검·빈 구멍 확인·업무 자료), 남은 시간, 종료 시 오늘 요약 3줄 |
+| `http://localhost:8780/chat` | 후임 | 지식베이스 질문(`/kb/ask`)과 근거, 확실도, 답이 없을 때 "퇴사자에게 질문을 넘겼다" 안내와 먼저 물어볼 역할, "왜 이렇게 돼 있나" 울타리 질문, 인수인계 산출물 보기 |
+| `http://localhost:8780/report` | 팀장 | 네 축별 커버리지(큐 질문 답변 수 포함), 비어 있는 주제, 모의 자료 불러오기·자료로 질문 만들기·사전 부검 질문·빈 구멍 다시 찾기·우선 질문 지정, 질문 큐, 빈 구멍, 아무도 확실히 모르는 영역, 산출물 5종 만들기·보기 |
+
+각 화면은 `/auth/me` 로 역할을 확인하고, 로그인 전이면 "초대 링크로 들어와 주세요.", 다른 역할이면 "이 화면을 볼 권한이 없습니다." 를 보여 준다. 퇴사자 id 는 초대 링크에서 온다. 인증을 끈 서버(`HANDOFF_AUTH=off`)에서는 예전처럼 `?leaver=<id>` 로 고른다 (생략 시 `default`).
 
 세션 규칙: 한 세션 15분(`HANDOFF_SESSION_SECONDS`), 마감 판정은 서버가 하고 유예 30초 뒤 답변을 거부한다. 퇴사자당 10회를 넘는 시작은 409로 거부하고, 새 세션을 시작하면 열려 있던 이전 세션은 자동 종료된다. 세션 상태는 SQLite 에 저장돼 서버를 재시작해도 회차·진행 위치·요약이 남는다.
 
 ### API 예시
+아래 예시는 인증을 끈 서버(`HANDOFF_AUTH=off`) 기준이다. 인증을 켠 서버에서는 초대 링크로 받은 로그인 쿠키가 있어야 하고 역할 범위 밖이면 403 이다.
+
 세션 시작 (응답의 `session_id`를 다음 호출에 사용):
 ```bash
 curl -s -X POST http://localhost:8780/sessions \
@@ -130,6 +170,7 @@ curl -s -X POST http://localhost:8780/kb/query \
 | 후임 질문 루프 | `POST /kb/ask` · `GET /leavers/{leaver}/successor-questions` | 주장 단위 검증을 거친 답. 답이 없으면 그 질문을 퇴사자 큐에 넣고, 다음 세션에서 먼저 묻는다 |
 | 산출물 | `POST /leavers/{leaver}/artifacts/{kind}` · `GET ...` | `runbook`·`onboarding_30d`·`pitfalls_top10`·`adr`. 절마다 근거 카드 id. 카드가 없으면 409 `no cards` |
 | 장애 훈련 | `POST /leavers/{leaver}/drills` · `GET /drills/{drill_id}` · `POST /drills/{drill_id}/answers` | 카드로 만든 장애 시나리오, 답에서 다룬 요점·빠진 요점 피드백 (점수 없음, 답 원문 저장 안 함) |
+| 팀장 우선 질문 | `POST /leavers/{leaver}/priority-questions` | 팀장이 지정한 질문을 큐 맨 앞(출처 `manager`)에 넣는다. 다음 세션에서 가장 먼저 출제된다 |
 
 모의 업무 자료 적재 (가상 결제 서비스 문서 8건):
 ```bash
@@ -224,9 +265,11 @@ HANDOFF_PROVIDER=qwen uv run --env-file .env python -m handoff.live_check_honest
 실측 출력: `LIVE HONESTY OK fence=1 expiry=5 route=물류운영팀 리드 tacit=ok premortem=1 latency_ms=3186`
 
 ### 품질 평가
+평가 도구는 인증을 지원하지 않고 옛 API `/kb/query` 를 쓴다. 평가용 서버는 반드시 `HANDOFF_AUTH=off` 로 띄운다 (`evaluation_repeat` 는 자기가 띄우는 서버에 직접 넣는다).
+
 가상 퇴사자 고정 데이터(`eval/fixtures/`)로 10세션을 진행한 뒤 후임 질문 20개를 던지고 규칙(기대 주제 + 키워드)으로 판정한다. 평가용 서버는 비어 있는 데이터 디렉토리로 따로 띄우는 것이 안전하다 (같은 퇴사자로 10회를 넘기면 409).
 ```bash
-HANDOFF_DATA_DIR=./data/eval uv run --env-file .env uvicorn handoff.main:create_app --factory --port 8780
+HANDOFF_AUTH=off HANDOFF_DATA_DIR=./data/eval uv run --env-file .env uvicorn handoff.main:create_app --factory --port 8780
 uv run python -m handoff.evaluation --base-url http://localhost:8780 --out-dir docs/eval --name mvp-qwen
 ```
 `--require-zero-fabricated` 를 붙이면 지어낸 답이 1건이라도 있을 때 종료코드 1.
@@ -240,7 +283,7 @@ uv run python -m handoff.evaluation --base-url http://localhost:8780 --out-dir d
 ### 지식 루프 평가
 `handoff.evaluation_loop` 가 HTTP 로 답변 깊이·지식 카드·빈 구멍·후임 질문 루프·산출물·훈련·개인정보 지표를 잰다 (고정 데이터 `eval/fixtures/loop_eval.yaml`, 규칙 판정). 같은 서버에서 기존 평가(`--require-zero-fabricated`)를 먼저 돌리고 이어서 루프 평가를 돌린다. 주의: `.env` 의 기본 공급자가 `fake` 이면 qwen 으로 재려면 `HANDOFF_PROVIDER=qwen` 을 앞에 붙인다.
 ```bash
-HANDOFF_PROVIDER=qwen HANDOFF_DATA_DIR=./data/eval-loop uv run --env-file .env uvicorn handoff.main:create_app --factory --port 8780
+HANDOFF_AUTH=off HANDOFF_PROVIDER=qwen HANDOFF_DATA_DIR=./data/eval-loop uv run --env-file .env uvicorn handoff.main:create_app --factory --port 8780
 uv run python -m handoff.evaluation --base-url http://localhost:8780 --out-dir docs/eval --name llm-loop-qwen-base --require-zero-fabricated
 uv run python -m handoff.evaluation_loop --base-url http://localhost:8780 --out-dir docs/eval --name llm-loop-qwen --leaver eval --require-targets
 ```
@@ -269,7 +312,7 @@ uv run python -m handoff.evaluation_loop --base-url http://localhost:8780 --out-
 - 대가: 검증이 보수적이라 답변 있음이 MVP 16/20 에서 12/20 으로 줄었고(q09·q13 놓침), 최장 세션이 6초에서 28초로 늘었다 (답마다 슬롯 판정·꼬리 질문 LLM 호출이 더해짐).
 
 ### 평가 N회 집계
-위 결과처럼 qwen 은 같은 입력에도 실행마다 답이 달라진다 (LLM 비결정성). 한 번 잰 수치는 운이 좋았거나 나빴던 한 표본일 뿐이라, `handoff.evaluation_repeat` 로 같은 평가를 N회(1~10) 돌려 평균·최소·최대·목표 충족 회차를 낸다. 회차마다 빈 임시 데이터 디렉토리로 서버를 새로 띄운다 (지식베이스가 퇴사자로 걸러지지 않아 같은 서버를 쓰면 이전 회차 답변이 다음 회차 근거에 섞인다). 서버는 도구가 직접 띄우므로 따로 실행하지 않는다.
+위 결과처럼 qwen 은 같은 입력에도 실행마다 답이 달라진다 (LLM 비결정성). 한 번 잰 수치는 운이 좋았거나 나빴던 한 표본일 뿐이라, `handoff.evaluation_repeat` 로 같은 평가를 N회(1~10) 돌려 평균·최소·최대·목표 충족 회차를 낸다. 회차마다 빈 임시 데이터 디렉토리로 서버를 새로 띄운다 (회차끼리 데이터가 섞이지 않게 한다). 서버는 도구가 직접 띄우므로 따로 실행하지 않는다.
 
 정직성 평가(`handoff.evaluation_honesty`, 고정 데이터 `eval/fixtures/honesty_eval.yaml`, 규칙 판정)는 단독으로도 돌릴 수 있다 (`--base-url`, `--require-targets`, 마지막 줄 `HONESTY ...`). 아래는 기존 평가·루프 평가·정직성 평가 3종을 3회 묶어 재는 명령이다.
 ```bash
@@ -324,6 +367,7 @@ uv run pytest tests/e2e -q
 - 기본 테스트·E2E 는 fake 공급자로 돌아 API 키가 필요 없다. 실제 답변 품질은 qwen 공급자에서만 의미가 있다.
 - qwen 공급자는 답변 원문을 외부 API(LLM·임베딩)로 보낸다. 기기 안 처리가 아니다.
 - 질문 트리는 백엔드 개발자 직군 1개, 입력은 텍스트만 (음성은 다음 단계).
-- 커버리지 리포트는 `/report` 화면과 `GET /coverage` JSON 1장이다. 메일 발송과 "이 주제 우선 질문하기"는 MVP 에서 뺐다.
+- 커버리지 리포트는 `/report` 화면과 `GET /coverage` JSON 1장이다. 메일 발송은 하지 않는다. 우선 질문 지정은 2026-10-23 역할 통합에서 `/report` 화면에 붙였다.
+- 인증은 초대 링크 하나에 역할 하나·퇴사자 하나다. 계정·SSO·초대 1회용·개별 폐기·여러 퇴사자를 보는 팀장은 없다.
 - 품질 평가는 규칙 기반이며 LLM 심판을 쓰지 않는다. 평가 데이터는 가상 고정 데이터다.
 - 인수인계에 없는 주제의 지어낸 답은 주장 단위 검증으로 qwen 실측 두 회차 모두 0/6 이었다 (검증 전 MVP 는 2/6). 다만 규칙 평가 20문항 기준이고, 검증이 보수적이라 있는 주제도 답하지 않는 경우가 늘었다 (답변 있음 12/20). `HANDOFF_VERIFY_CLAIMS=off` 면 지식베이스 답을 검증 없이 MVP 때처럼 만든다.
