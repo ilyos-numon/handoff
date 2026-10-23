@@ -114,8 +114,8 @@ def test_head_is_treated_as_get(enforcer) -> None:  # type: ignore[no-untyped-de
 
 def test_unknown_route_and_role_denied(enforcer) -> None:  # type: ignore[no-untyped-def]
     assert is_allowed(enforcer, "manager", "GET", "/nope") is False
-    assert is_allowed(enforcer, "admin", "POST", "/sessions") is False
-    assert is_allowed(enforcer, "admin", "GET", "/health") is False
+    assert is_allowed(enforcer, "intruder", "POST", "/sessions") is False
+    assert is_allowed(enforcer, "intruder", "GET", "/health") is False
 
 
 def test_policy_files_are_package_data() -> None:
@@ -131,7 +131,12 @@ def test_constants() -> None:
     assert SESSION_COOKIE == "handoff_session"
     assert SESSION_MAX_AGE_S == 7 * 24 * 3600
     assert ROLES == ("leaver", "successor", "manager")
-    assert HOME_PATH == {"leaver": "/", "successor": "/chat", "manager": "/report"}
+    assert HOME_PATH == {
+        "leaver": "/",
+        "successor": "/chat",
+        "manager": "/report",
+        "admin": "/admin",
+    }
 
 
 def test_build_auth_off_returns_none(tmp_path: Path) -> None:

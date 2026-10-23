@@ -6,18 +6,31 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 from itsdangerous import BadData, URLSafeTimedSerializer
-from pydantic import BaseModel, StringConstraints, ValidationError
+from pydantic import BaseModel, StringConstraints, ValidationError, model_validator
 
-Role = Literal["leaver", "successor", "manager"]
-ROLES: tuple[Role, ...] = ("leaver", "successor", "manager")
+Role = Literal["leaver", "successor", "manager", "admin"]
+ROLES: tuple[Role, ...] = ("leaver", "successor", "manager")  # invitable roles
+ADMIN_ROLE: Role = "admin"
+ADMIN_SCOPE = "_admin"  # fixed leaver value of an admin principal; never a real leaver
 INVITE_SALT = "handoff-invite"
 SECRET_FILE = "auth_secret"
-HOME_PATH: dict[Role, str] = {"leaver": "/", "successor": "/chat", "manager": "/report"}
+HOME_PATH: dict[Role, str] = {
+    "leaver": "/",
+    "successor": "/chat",
+    "manager": "/report",
+    "admin": "/admin",
+}
 
 
 class Principal(BaseModel):
     role: Role
     leaver: Annotated[str, StringConstraints(pattern=r"^[a-z0-9_-]{1,40}$")]
+
+    @model_validator(mode="after")
+    def _admin_scope_only_for_admin(self) -> "Principal":
+        if (self.role == ADMIN_ROLE) != (self.leaver == ADMIN_SCOPE):
+            raise ValueError("the admin role and the admin scope go together")
+        return self
 
 
 class InvalidInvite(ValueError):

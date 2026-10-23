@@ -49,3 +49,4 @@ p, manager, /leavers/{leaver}/premortem/questions, POST
 g, leaver, anonymous
 g, successor, anonymous
 g, manager, anonymous
+g, admin, anonymous
