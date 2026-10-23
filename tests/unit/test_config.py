@@ -18,6 +18,7 @@ def test_defaults_when_env_empty() -> None:
         data_dir=Path("./data"),
         min_score=0.25,
         collection="handoff_kb",
+        auth=True,
     )
     assert isinstance(settings.data_dir, Path)
 
@@ -227,3 +228,45 @@ def test_tacit_followups_default_and_override() -> None:
 def test_tacit_followups_rejects_non_on_off(value: str) -> None:
     with pytest.raises(ValueError, match="HANDOFF_TACIT_FOLLOWUPS must be on or off"):
         load_settings({"HANDOFF_TACIT_FOLLOWUPS": value})
+
+
+def test_auth_settings_defaults() -> None:
+    settings = load_settings({})
+    assert settings.auth is True
+    assert settings.auth_secret == ""
+    assert settings.invite_ttl_hours == 72
+    direct = Settings(provider="fake", data_dir=Path("./data"), min_score=0.25, collection="c")
+    assert direct.auth is False
+    assert direct.invite_ttl_hours == 72
+
+
+def test_auth_settings_overrides() -> None:
+    settings = load_settings(
+        {
+            "HANDOFF_AUTH": "off",
+            "HANDOFF_AUTH_SECRET": "s3cr3t-value",
+            "HANDOFF_INVITE_TTL_HOURS": "1",
+        }
+    )
+    assert settings.auth is False
+    assert settings.auth_secret == "s3cr3t-value"
+    assert settings.invite_ttl_hours == 1
+    assert load_settings({"HANDOFF_AUTH": "on"}).auth is True
+
+
+@pytest.mark.parametrize("value", ["yes", "true", "OFF", "0", ""])
+def test_auth_rejects_non_on_off(value: str) -> None:
+    with pytest.raises(ValueError, match="HANDOFF_AUTH must be on or off"):
+        load_settings({"HANDOFF_AUTH": value})
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "abc", "1.5"])
+def test_invalid_invite_ttl_names_variable(value: str) -> None:
+    with pytest.raises(ValueError, match="HANDOFF_INVITE_TTL_HOURS"):
+        load_settings({"HANDOFF_INVITE_TTL_HOURS": value})
+
+
+def test_repr_hides_auth_secret() -> None:
+    settings = load_settings({"HANDOFF_AUTH_SECRET": "s3cr3t-value"})
+    assert "s3cr3t-value" not in repr(settings)
+    assert "s3cr3t-value" not in str(settings)

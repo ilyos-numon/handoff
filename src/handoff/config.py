@@ -31,6 +31,9 @@ class Settings:
     queue_per_session: int = 2
     verify_claims: bool = True
     tacit_followups: bool = True
+    auth: bool = False
+    auth_secret: str = field(default="", repr=False)
+    invite_ttl_hours: int = 72
 
 
 def _float(source: Mapping[str, str], name: str, default: float) -> float:
@@ -94,6 +97,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         queue_per_session=_int(source, "HANDOFF_QUEUE_PER_SESSION", 2, 0),
         verify_claims=_on_off(source, "HANDOFF_VERIFY_CLAIMS", True),
         tacit_followups=_on_off(source, "HANDOFF_TACIT_FOLLOWUPS", True),
+        auth=_on_off(source, "HANDOFF_AUTH", True),
+        auth_secret=source.get("HANDOFF_AUTH_SECRET", ""),
+        invite_ttl_hours=_int(source, "HANDOFF_INVITE_TTL_HOURS", 72, 1),
     )
 
 
