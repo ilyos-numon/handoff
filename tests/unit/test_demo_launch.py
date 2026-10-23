@@ -4,6 +4,7 @@ import asyncio
 import os
 import socket
 import struct
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -17,9 +18,15 @@ ENV_KEYS = ("PORT", "HANDOFF_DATA_DIR", "HANDOFF_DEMO", "HANDOFF_AUTH", "HANDOFF
 
 
 @pytest.fixture(autouse=True)
-def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def _clean_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    # launch.main writes os.environ directly; restore the whole environment afterwards
+    # so its HANDOFF_* defaults do not leak into later tests (e.g. CLI subprocesses).
+    saved = dict(os.environ)
     for key in ENV_KEYS:
         monkeypatch.delenv(key, raising=False)
+    yield
+    os.environ.clear()
+    os.environ.update(saved)
 
 
 class _FakeServer:

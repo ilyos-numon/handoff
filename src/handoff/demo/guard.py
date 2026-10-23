@@ -1,6 +1,7 @@
 """Public demo abuse guards: slowapi rate limits, upload block and body size cap."""
 
 import json
+import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -44,6 +45,26 @@ def client_key(request: Request) -> str:
     if hops:
         return hops[-1]
     return get_remote_address(request)
+
+
+class _RedactClientKey(logging.Filter):
+    """Drop the client key (the caller's address) from slowapi's "limit exceeded" log line."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if (
+            isinstance(record.msg, str)
+            and record.msg.startswith("ratelimit ")
+            and isinstance(record.args, tuple)
+            and len(record.args) == 3
+        ):
+            record.args = (record.args[0], "<client>", record.args[2])
+        return True
+
+
+def _redact_slowapi_log() -> None:
+    logger = logging.getLogger("slowapi")
+    if not any(isinstance(f, _RedactClientKey) for f in logger.filters):
+        logger.addFilter(_RedactClientKey())
 
 
 @dataclass(frozen=True)
@@ -142,6 +163,7 @@ class DemoBodyGuard:
 def install_demo_guard(app: FastAPI, settings_like: DemoGuardConfig) -> None:
     """Add the demo guards. Call before SessionMiddleware is added so the session stays outermost."""
     limiter = Limiter(key_func=client_key, default_limits=[settings_like.rate])
+    _redact_slowapi_log()
 
     # Per-path counters, like slowapi's default limits (key style "url").
     @limiter.limit(settings_like.rate)

@@ -1,6 +1,7 @@
 """Demo role header (X-Handoff-As) and public demo abuse guards on the full app."""
 
 import json
+import logging
 import time
 from base64 import b64encode
 from collections.abc import Iterator
@@ -237,3 +238,14 @@ def test_session_middleware_is_outermost(app: FastAPI, client: TestClient) -> No
     # The cookie set by /demo/start is read again behind the guards.
     assert client.get("/demo/status").json()["leaver"] == leaver
     assert _ask(client, leaver, "successor") == 200
+
+
+def test_rate_limit_log_does_not_contain_client_key(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    with TestClient(create_app(_settings(tmp_path, demo_rate="1/minute"))) as c:
+        codes = [c.get("/demo/status", headers=_xff("carol.example")).status_code for _ in range(2)]
+        assert codes == [200, 429]
+    assert "exceeded" in caplog.text  # positive control: slowapi did log the 429
+    assert "carol.example" not in caplog.text
