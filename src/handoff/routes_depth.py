@@ -1,4 +1,4 @@
-"""HTTP routes for answer depth (slot judgement, slot follow-ups, session fill rate)."""
+"""HTTP routes for answer depth (slot judgement, slot and tacit follow-ups, session fill rate)."""
 
 from typing import Annotated
 
@@ -11,6 +11,7 @@ from handoff.contracts import (
     SessionDepthReport,
     SlotFollowUpResponse,
     SlotJudgement,
+    TacitFollowUpResponse,
 )
 from handoff.depth import DepthService
 from handoff.providers import ProviderError
@@ -40,6 +41,11 @@ def depth_follow_up(body: DepthJudgeRequest, depth: DepthDep) -> SlotFollowUpRes
         return depth.suggest(body.question, body.answer)
     except ProviderError:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail=PROVIDER_UNAVAILABLE) from None
+
+
+@router.post("/depth/tacit", response_model=TacitFollowUpResponse)
+def depth_tacit(body: DepthJudgeRequest, depth: DepthDep) -> TacitFollowUpResponse:
+    return depth.tacit(body.question, body.answer)
 
 
 @router.get("/sessions/{session_id}/depth", response_model=SessionDepthReport)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime
 
@@ -14,6 +15,7 @@ from handoff.contracts import (
     Slot,
     SlotFollowUpResponse,
     SlotJudgement,
+    TacitFollowUpResponse,
     judge_slots_by_cues,
     topic_id,
 )
@@ -21,7 +23,10 @@ from handoff.knowledge_store import KnowledgeStore
 from handoff.providers import LLM, ProviderError
 from handoff.question_tree import FollowUp
 from handoff.session import Question
+from handoff.signals import TACIT_FOLLOW_UP_TEMPLATE, tacit_cues
 from handoff.store import SessionStore
+
+_TACIT_ID = re.compile(r"-t\d+$")
 
 
 def utc_now() -> datetime:
@@ -36,12 +41,15 @@ class DepthService:
         sessions: SessionStore,
         max_followups: int,
         clock: Callable[[], datetime] = utc_now,
+        *,
+        tacit_followups: bool = True,
     ) -> None:
         self._llm = llm
         self._store = store
         self._sessions = sessions
         self._max_followups = max_followups
         self._clock = clock
+        self._tacit_followups = tacit_followups
 
     def judge(self, question: str, answer: str) -> SlotJudgement:
         try:
@@ -62,6 +70,19 @@ class DepthService:
             return SlotFollowUpResponse(slot=None, text=None)
         slot = j.missing[0]
         return SlotFollowUpResponse(slot=slot, text=self._slot_text(question, answer, slot))
+
+    def _tacit_text(self, question: str, answer: str, cues: list[str]) -> str:
+        try:
+            text = self._llm.tacit_follow_up(question, answer, cues).strip()
+        except ProviderError:
+            text = ""
+        return text or TACIT_FOLLOW_UP_TEMPLATE.format(cue=cues[0])
+
+    def tacit(self, question: str, answer: str) -> TacitFollowUpResponse:
+        cues = tacit_cues(answer)
+        if not cues:
+            return TacitFollowUpResponse(cues=[], text=None)
+        return TacitFollowUpResponse(cues=cues, text=self._tacit_text(question, answer, cues))
 
     def _tree_follow_up(
         self, question: str, text: str, candidates: list[FollowUp]
@@ -88,9 +109,19 @@ class DepthService:
             full_answer = text
         j = self.judge(root_question, full_answer)
 
+        tacit_asked = any(_TACIT_ID.search(a.question_id) for a in thread)
+        cues = tacit_cues(text) if self._tacit_followups and not tacit_asked else []
+
         nxt: Question | None = None
         if rounds_done < self._max_followups:
-            if j.missing:
+            if cues:
+                nxt = Question(
+                    id=f"{topic}-t1",
+                    axis=answered.axis,
+                    text=self._tacit_text(root_question, text, cues),
+                    kind="follow_up",
+                )
+            elif j.missing:
                 slot = j.missing[0]
                 nxt = Question(
                     id=f"{topic}-s{rounds_done + 1}",

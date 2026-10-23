@@ -30,6 +30,7 @@ from handoff.providers import FakeLLM, ProviderError
 from handoff.question_tree import FollowUp
 from handoff.routes_depth import router
 from handoff.session import Question
+from handoff.signals import TACIT_FOLLOW_UP_TEMPLATE
 from handoff.store import SessionRow, SessionStore
 
 T0 = datetime(2026, 10, 23, 9, 0, tzinfo=UTC)
@@ -473,3 +474,81 @@ def test_route_provider_error_503(path: str) -> None:
     assert resp.status_code == 503
     assert resp.json() == {"detail": "provider unavailable"}
 
+
+
+# ---- tacit follow-ups (shared cap, -t1 first)
+
+
+TACIT_ROOT_ANSWER = "배포 전에 그냥 감으로 변경 목록을 봅니다."
+
+
+class TacitFailingLLM(FakeLLM):
+    def tacit_follow_up(self, question: str, answer: str, cues: list[str]) -> str:
+        raise ProviderError("llm request failed: status=503")
+
+
+def test_decide_tacit_cue_asks_t1_first(sessions: SessionStore, ks: KnowledgeStore) -> None:
+    svc = _service(sessions, ks)
+    _answer(sessions, "sys-01", ROOT_Q, TACIT_ROOT_ANSWER)
+    q = svc.decide_follow_up("s1", _main_q(), TACIT_ROOT_ANSWER, CANDIDATES)
+    assert q is not None
+    assert q.id == "sys-01-t1"
+    assert q.kind == "follow_up"
+    assert q.axis == "systems"
+    assert q.text == TACIT_FOLLOW_UP_TEMPLATE.format(cue="그냥")
+    [rec] = ks.list_depth("s1")
+    assert rec.question_id == "sys-01"
+    assert rec.follow_up_id == "sys-01-t1"
+    assert rec.missing  # judgement is still recorded as before
+
+
+def test_decide_tacit_provider_error_uses_template(sessions: SessionStore,
+                                                   ks: KnowledgeStore) -> None:
+    svc = _service(sessions, ks, TacitFailingLLM())
+    _answer(sessions, "sys-01", ROOT_Q, TACIT_ROOT_ANSWER)
+    q = svc.decide_follow_up("s1", _main_q(), TACIT_ROOT_ANSWER, CANDIDATES)
+    assert q is not None and q.id == "sys-01-t1"
+    assert q.text == TACIT_FOLLOW_UP_TEMPLATE.format(cue="그냥")
+
+
+def test_decide_tacit_already_asked_falls_to_slot(sessions: SessionStore,
+                                                  ks: KnowledgeStore) -> None:
+    svc = _service(sessions, ks, max_followups=2)
+    _answer(sessions, "sys-01", ROOT_Q, TACIT_ROOT_ANSWER)
+    first = svc.decide_follow_up("s1", _main_q(), TACIT_ROOT_ANSWER, CANDIDATES)
+    assert first is not None and first.id == "sys-01-t1"
+    follow_answer = "경험상 그때가 가장 위험합니다."
+    _answer(sessions, first.id, first.text, follow_answer)
+    second = svc.decide_follow_up("s1", first, follow_answer, [])
+    assert second is not None
+    assert second.id == "sys-01-s2"
+    recs = ks.list_depth("s1")
+    assert [r.follow_up_id for r in recs] == ["sys-01-t1", "sys-01-s2"]
+
+
+def test_decide_tacit_shares_cap(sessions: SessionStore, ks: KnowledgeStore) -> None:
+    svc = _service(sessions, ks, max_followups=1)
+    _answer(sessions, "sys-01", ROOT_Q, SPEC_ANSWER)
+    first = svc.decide_follow_up("s1", _main_q(), SPEC_ANSWER, CANDIDATES)
+    assert first is not None and first.id == "sys-01-s1"
+    follow_answer = "그건 보통 감으로 합니다."
+    _answer(sessions, first.id, first.text, follow_answer)
+    assert svc.decide_follow_up("s1", first, follow_answer, []) is None
+    assert ks.list_depth("s1")[-1].follow_up_id is None
+
+
+def test_decide_tacit_disabled_keeps_old_behaviour(sessions: SessionStore,
+                                                   ks: KnowledgeStore) -> None:
+    svc = DepthService(FakeLLM(), ks, sessions, 1, clock=lambda: T0, tacit_followups=False)
+    _answer(sessions, "sys-01", ROOT_Q, TACIT_ROOT_ANSWER)
+    q = svc.decide_follow_up("s1", _main_q(), TACIT_ROOT_ANSWER, CANDIDATES)
+    assert q is not None
+    assert q.id == "sys-01-s1"
+
+
+def test_decide_tacit_no_cue_unchanged(sessions: SessionStore, ks: KnowledgeStore) -> None:
+    svc = _service(sessions, ks)
+    _answer(sessions, "sys-01", ROOT_Q, FULL_ANSWER)
+    q = svc.decide_follow_up("s1", _main_q(), FULL_ANSWER, CANDIDATES)
+    assert q is not None
+    assert not q.id.endswith("-t1")
