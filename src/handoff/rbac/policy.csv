@@ -50,6 +50,11 @@ p, anonymous, /admin, GET
 p, admin, /admin/leavers, GET
 p, admin, /admin/leavers, POST
 p, admin, /admin/leavers/{leaver_id}/invites, POST
+p, anonymous, /demo, GET
+p, anonymous, /demo/start, POST
+p, anonymous, /demo/role, POST
+p, anonymous, /demo/reset, POST
+p, anonymous, /demo/status, GET
 g, leaver, anonymous
 g, successor, anonymous
 g, manager, anonymous

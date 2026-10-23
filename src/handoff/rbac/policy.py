@@ -59,6 +59,11 @@ ROUTE_SCOPES: dict[tuple[str, str], Scope] = {
     ("GET", "/admin/leavers"): "none",
     ("POST", "/admin/leavers"): "none",
     ("POST", "/admin/leavers/{leaver_id}/invites"): "none",
+    ("GET", "/demo"): "public",
+    ("POST", "/demo/start"): "public",
+    ("POST", "/demo/role"): "public",
+    ("POST", "/demo/reset"): "public",
+    ("GET", "/demo/status"): "public",
 }
 
 

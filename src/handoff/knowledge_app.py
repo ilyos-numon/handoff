@@ -1,6 +1,7 @@
 """Assemble knowledge-loop services and routers for the FastAPI app."""
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from fastapi import Depends, FastAPI
 from starlette.middleware.sessions import SessionMiddleware
@@ -37,6 +38,9 @@ from handoff.sources import SourceService
 from handoff.store import SessionStore
 from handoff.verify import ClaimVerifier, SuccessorService
 
+if TYPE_CHECKING:
+    from handoff.demo.routes import DemoRuntime
+
 
 @dataclass
 class KnowledgeServices:
@@ -56,6 +60,25 @@ class KnowledgeServices:
     auth: AuthConfig | None = None
     admin: LeaverRegistry | None = None
     public_url: str = ""
+    demo: "DemoRuntime | None" = None
+
+
+def _build_demo(settings: Settings, llm: LLM) -> "DemoRuntime | None":
+    if not settings.demo:
+        return None
+    # Imported here: handoff.demo.sandbox imports this module.
+    from handoff.demo.routes import DemoRuntime
+    from handoff.demo.sandbox import DemoSandboxes
+
+    stats = getattr(llm, "stats", None)
+    return DemoRuntime(
+        sandboxes=DemoSandboxes(
+            settings.data_dir / "demo.db",
+            settings.demo_ttl_hours * 3600,
+            settings.demo_max_sandboxes,
+        ),
+        llm_stats=stats if callable(stats) else None,
+    )
 
 
 def build_knowledge(settings: Settings, llm: LLM, session_store: SessionStore) -> KnowledgeServices:
@@ -86,10 +109,13 @@ def build_knowledge(settings: Settings, llm: LLM, session_store: SessionStore) -
         auth=build_auth(settings),
         admin=LeaverRegistry(settings.data_dir / "admin.db") if settings.auth else None,
         public_url=settings.public_url,
+        demo=_build_demo(settings, llm),
     )
 
 
 def include_knowledge_routers(app: FastAPI) -> None:
+    from handoff.demo import routes as demo_routes  # see _build_demo
+
     auth: AuthConfig | None = getattr(getattr(app.state, "knowledge", None), "auth", None)
     if auth is not None:
         app.add_middleware(
@@ -112,5 +138,6 @@ def include_knowledge_routers(app: FastAPI) -> None:
         routes_fence,
         routes_premortem,
         admin,
+        demo_routes,
     ):
         app.include_router(module.router, dependencies=[Depends(authorize)])

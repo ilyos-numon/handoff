@@ -64,6 +64,11 @@ POLICY_TABLE: dict[tuple[str, str], str] = {
     ("GET", "/admin/leavers"): "A",
     ("POST", "/admin/leavers"): "A",
     ("POST", "/admin/leavers/{leaver_id}/invites"): "A",
+    ("GET", "/demo"): PUB,
+    ("POST", "/demo/start"): PUB,
+    ("POST", "/demo/role"): PUB,
+    ("POST", "/demo/reset"): PUB,
+    ("GET", "/demo/status"): PUB,
 }
 PUBLIC = {key for key, scope in ROUTE_SCOPES.items() if scope == "public"}
 LETTER: dict[Role, str] = {"leaver": "L", "successor": "S", "manager": "M", "admin": "A"}
