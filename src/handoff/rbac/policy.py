@@ -1,6 +1,6 @@
 """Role-to-route policy backed by pycasbin (model.conf + policy.csv)."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
@@ -60,7 +60,7 @@ ROUTE_SCOPES: dict[tuple[str, str], Scope] = {
 
 @dataclass(frozen=True)
 class AuthConfig:
-    secret: str
+    secret: str = field(repr=False)
     invite_ttl_s: int
     enforcer: casbin.Enforcer
 

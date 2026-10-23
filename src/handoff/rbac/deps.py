@@ -106,5 +106,8 @@ async def authorize(request: Request) -> None:
     if scope in ("public", "none"):
         return
     target = await _target_leaver(request, scope)
+    if scope == "body" and target is None:
+        # Fail closed: an unreadable body or a non-string leaver cannot be scoped.
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=FORBIDDEN)
     if target is not None and (principal is None or target != principal.leaver):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=FORBIDDEN)

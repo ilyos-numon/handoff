@@ -175,12 +175,41 @@ def test_body_scope_and_default(client: TestClient) -> None:
     assert client.post("/kb/ask", json={"question": "q"}).status_code == 403
 
 
-def test_body_scope_unparsable_body_skips_check(client: TestClient) -> None:
+def test_body_scope_unparsable_body_is_denied(client: TestClient) -> None:
     _login(client, "successor")
+    # Malformed JSON declared as JSON is rejected by FastAPI before any dependency
+    # or handler runs, so it never reaches the route.
+    declared = client.post(
+        "/kb/ask", content=b"not json", headers={"content-type": "application/json"}
+    )
+    assert declared.status_code == 422
+    # Any other unparsable body reaches authorize, which fails closed.
+    response = client.post("/kb/ask", content=b"not json", headers={"content-type": "text/plain"})
+    assert response.status_code == 403
+    assert response.json() == {"detail": FORBIDDEN}
+
+
+def test_body_scope_non_string_or_non_object_is_denied(client: TestClient) -> None:
+    _login(client, "successor")
+    assert client.post("/kb/ask", json={"leaver": 7, "question": "q"}).status_code == 403
+    assert client.post("/kb/ask", json={"leaver": None, "question": "q"}).status_code == 403
+    assert client.post("/kb/ask", json=["kim"]).status_code == 403
+
+
+def test_body_scope_missing_leaver_is_denied_for_other_leaver(client: TestClient) -> None:
+    _login(client, "successor", "kim")
+    response = client.post("/kb/ask", json={"question": "q"})
+    assert response.status_code == 403
+    assert response.json() == {"detail": FORBIDDEN}
+
+
+def test_body_scope_failures_pass_through_when_auth_off() -> None:
+    client = TestClient(_app(None))
     response = client.post(
         "/kb/ask", content=b"not json", headers={"content-type": "application/json"}
     )
     assert response.status_code == 422
+    assert client.post("/kb/ask", json={"leaver": 7}).status_code == 200
 
 
 def test_session_scope_and_missing_session_reaches_handler(client: TestClient) -> None:

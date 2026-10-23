@@ -157,6 +157,12 @@ def test_build_auth_on(tmp_path: Path) -> None:
     assert is_allowed(auth.enforcer, "successor", "POST", "/kb/ask") is True
 
 
+def test_auth_config_repr_hides_secret() -> None:
+    config = AuthConfig(secret="very-secret-value", invite_ttl_s=60, enforcer=build_enforcer())
+    assert "very-secret-value" not in repr(config)
+    assert "invite_ttl_s=60" in repr(config)
+
+
 # --- tokens ---
 
 
