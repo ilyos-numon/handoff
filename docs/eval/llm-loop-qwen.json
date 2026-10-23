@@ -1,16 +1,16 @@
 {
   "name": "llm-loop-qwen",
   "leaver": "eval",
-  "generated_at": "2026-10-23T01:51:27.589266Z",
+  "generated_at": "2026-10-23T02:02:27.188420Z",
   "metrics": {
     "depth_agree": 1.0,
     "slot_target": 1.0,
     "slot_fill": 1.0,
-    "card_recall": 0.818,
-    "card_evidence": 0.889,
+    "card_recall": 0.727,
+    "card_evidence": 1.0,
     "gap_recall": 1.0,
     "loop_closed": {
-      "n": 2,
+      "n": 1,
       "m": 2
     },
     "artifact_cited": 1.0,
@@ -21,7 +21,7 @@
     "pii_leaks": 0
   },
   "unmet": [
-    "card_evidence"
+    "loop_closed"
   ],
   "depth": [
     {
@@ -38,7 +38,7 @@
       "agreed": 5,
       "target": "who",
       "follow_slot": "who",
-      "follow_text": "새 키 발급을 위해 어떤 역할의 담당자에게 연락하나요?",
+      "follow_text": "해당 작업을 담당하는 역할은 누구인가요?",
       "target_ok": true,
       "fill_ok": true
     },
@@ -56,7 +56,7 @@
       "agreed": 5,
       "target": "why",
       "follow_slot": "why",
-      "follow_text": "재실행 스크립트를 사용하여 그 날짜만 다시 돌리는 이유를 알려주실 수 있나요?",
+      "follow_text": "재실행 스크립트로 그 날짜만 다시 돌리는 이유를 알려주실 수 있나요?",
       "target_ok": true,
       "fill_ok": true
     },
@@ -92,7 +92,7 @@
       "agreed": 5,
       "target": "who",
       "follow_slot": "who",
-      "follow_text": "누구에게 이 상황을 전달하시나요?",
+      "follow_text": "해당 확인 작업은 주로 누구 또는 어떤 역할의 담당자가 수행하나요?",
       "target_ok": true,
       "fill_ok": true
     },
@@ -101,7 +101,7 @@
       "agreed": 5,
       "target": "fallback",
       "follow_slot": "fallback",
-      "follow_text": "원래 방법이 안 되면 어떤 대안을 사용하시나요?",
+      "follow_text": "원래 방법이 안 되면 대안은 무엇인가요?",
       "target_ok": true,
       "fill_ok": true
     },
@@ -143,7 +143,7 @@
         "일괄 수정"
       ],
       "card_ids": [
-        "c19"
+        "c26"
       ],
       "found": true,
       "evidence_ok": true
@@ -155,7 +155,8 @@
         "결제 개발 채널"
       ],
       "card_ids": [
-        "c5"
+        "c5",
+        "c35"
       ],
       "found": true,
       "evidence_ok": true
@@ -167,8 +168,8 @@
         "재시도"
       ],
       "card_ids": [
-        "c9",
-        "c10"
+        "c8",
+        "c13"
       ],
       "found": true,
       "evidence_ok": true
@@ -179,11 +180,9 @@
       "terms": [
         "인증 오류"
       ],
-      "card_ids": [
-        "c21"
-      ],
-      "found": true,
-      "evidence_ok": true
+      "card_ids": [],
+      "found": false,
+      "evidence_ok": false
     },
     {
       "type": "procedure",
@@ -192,7 +191,7 @@
         "영향 범위"
       ],
       "card_ids": [
-        "c14"
+        "c20"
       ],
       "found": true,
       "evidence_ok": true
@@ -216,7 +215,7 @@
         "정산 파일"
       ],
       "card_ids": [
-        "c28"
+        "c32"
       ],
       "found": true,
       "evidence_ok": true
@@ -228,10 +227,13 @@
         "고객센터"
       ],
       "card_ids": [
-        "c17"
+        "c21",
+        "c24",
+        "c35",
+        "c58"
       ],
       "found": true,
-      "evidence_ok": false
+      "evidence_ok": true
     },
     {
       "type": "procedure",
@@ -240,7 +242,7 @@
         "백업 테이블"
       ],
       "card_ids": [
-        "c18"
+        "c25"
       ],
       "found": true,
       "evidence_ok": true
@@ -267,13 +269,13 @@
   "loop": [
     {
       "question": "정산 배치가 실패하면 손으로 어떻게 복구하나요?",
-      "queue_item_id": "q19",
+      "queue_item_id": "q14",
       "closed": true
     },
     {
       "question": "결제 대행사 쪽에 장애가 나면 누구한테 연락해요?",
-      "queue_item_id": "q20",
-      "closed": true
+      "queue_item_id": "q15",
+      "closed": false
     }
   ],
   "artifacts": [
@@ -297,8 +299,8 @@
     },
     {
       "kind": "adr",
-      "sections": 4,
-      "cited": 4,
+      "sections": 6,
+      "cited": 6,
       "generated": true
     }
   ],
