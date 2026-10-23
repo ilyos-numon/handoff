@@ -1,6 +1,7 @@
 """Qdrant-backed knowledge base."""
 
 import uuid
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -40,6 +41,10 @@ class KBAnswer(BaseModel):
     found: bool
     answer: str
     citations: list[Citation]
+    claims_removed: int = 0
+
+
+Verifier = Callable[[str, str, list[Citation]], tuple[str | None, int]]
 
 
 def _not_found() -> KBAnswer:
@@ -55,12 +60,14 @@ class KnowledgeBase:
         min_score: float,
         collection: str = "handoff_kb",
         embed_with_question: bool = False,
+        verifier: Verifier | None = None,
     ) -> None:
         self._embedder = embedder
         self._llm = llm
         self._min_score = min_score
         self._collection = collection
         self._embed_with_question = embed_with_question
+        self._verifier = verifier
         self._client = QdrantClient(path=str(store_path))
         if self._client.collection_exists(collection):
             vectors = self._client.get_collection(collection).config.params.vectors
@@ -130,7 +137,14 @@ class KnowledgeBase:
             return KBAnswer(found=True, answer=COMPOSE_FAILED_MESSAGE, citations=citations)
         if answer is None:
             return _not_found()
-        return KBAnswer(found=True, answer=answer, citations=citations)
+        if self._verifier is None:
+            return KBAnswer(found=True, answer=answer, citations=citations)
+        kept, removed = self._verifier(question, answer, citations)
+        if kept is None:
+            return KBAnswer(
+                found=False, answer=NOT_FOUND_MESSAGE, citations=[], claims_removed=removed
+            )
+        return KBAnswer(found=True, answer=kept, citations=citations, claims_removed=removed)
 
     def close(self) -> None:
         self._client.close()

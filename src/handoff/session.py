@@ -10,13 +10,14 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from handoff.contracts import SessionHooks, is_queue_id, topic_id
 from handoff.coverage import CoverageReport, build_coverage
 from handoff.kb import KBEntry, KnowledgeBase
-from handoff.providers import LLM
+from handoff.providers import LLM, ProviderError
 from handoff.question_tree import Axis, QuestionTree, load_tree
 from handoff.store import SessionRow, SessionStore
 
-QuestionKind = Literal["main", "follow_up"]
+QuestionKind = Literal["main", "follow_up", "queued"]
 
 DEFAULT_LEAVER = "default"
 LEAVER_PATTERN = r"^[a-z0-9_-]{1,40}$"
@@ -89,6 +90,7 @@ class SessionService:
         session_seconds: int = 900,
         grace_seconds: int = 30,
         planned: int = 10,
+        hooks: SessionHooks | None = None,
     ) -> None:
         self._kb = kb
         self._llm = llm
@@ -97,11 +99,14 @@ class SessionService:
         self._session_seconds = session_seconds
         self._grace_seconds = grace_seconds
         self._planned = planned
+        self._hooks = hooks
 
     def _start_index(self, tree: QuestionTree, last: SessionRow) -> int:
         current = _current(last)
         if current is None:
             return len(tree.nodes)
+        if is_queue_id(current.id):
+            return last.node_index
         if current.kind == "main" and not any(
             a.question_id == current.id for a in self._store.answers(last.session_id)
         ):
@@ -112,6 +117,7 @@ class SessionService:
         if not re.fullmatch(LEAVER_PATTERN, leaver):
             raise ValueError(f"invalid leaver: must match {LEAVER_PATTERN}")
         tree = load_tree(role)
+        session_id = uuid.uuid4().hex
         prev = self._store.list_sessions(leaver, role)
         if len(prev) >= self._planned:
             raise SessionLimitError(f"{leaver} already has {len(prev)} sessions")
@@ -119,11 +125,16 @@ class SessionService:
             if row.ended_at is None:
                 self.end(row.session_id)
         index = self._start_index(tree, prev[-1]) if prev else 0
-        if index >= len(tree.nodes):
-            raise TreeExhaustedError(f"question tree {role} is exhausted for {leaver}")
+        first: Question | None = None
+        if self._hooks is not None:
+            item = self._hooks.next_queued(session_id, leaver, role)
+            if item is not None:
+                first = Question(id=item.id, axis=item.axis, text=item.text, kind="queued")
+        if first is None:
+            if index >= len(tree.nodes):
+                raise TreeExhaustedError(f"question tree {role} is exhausted for {leaver}")
+            first = _main_question(tree, index)
         now = self._clock()
-        session_id = uuid.uuid4().hex
-        first = _main_question(tree, index)
         self._store.insert_session(
             SessionRow(
                 session_id=session_id,
@@ -161,7 +172,7 @@ class SessionService:
             raise SessionTimeOverError(session_id)
         tree = load_tree(row.role)
         current = _current(row)
-        if current is None or row.node_index >= len(tree.nodes):
+        if current is None or (self._hooks is None and row.node_index >= len(tree.nodes)):
             return None
         self._store.add_answer(
             KBEntry(
@@ -175,12 +186,14 @@ class SessionService:
             )
         )
         nxt: Question | None = None
-        if current.kind == "main":
+        if self._hooks is not None:
+            nxt = self._next_with_hooks(self._hooks, row, tree, current, text)
+        elif current.kind == "main":
             node = tree.nodes[row.node_index]
             follow = self._llm.follow_up(node.text, text, node.follow_ups)
             if follow is not None:
                 nxt = Question(id=follow.id, axis=node.axis, text=follow.text, kind="follow_up")
-        if nxt is None:
+        if nxt is None and self._hooks is None:
             row.node_index += 1
             if row.node_index < len(tree.nodes):
                 nxt = _main_question(tree, row.node_index)
@@ -190,6 +203,29 @@ class SessionService:
             return None
         return nxt
 
+    def _next_with_hooks(
+        self,
+        hooks: SessionHooks,
+        row: SessionRow,
+        tree: QuestionTree,
+        current: Question,
+        text: str,
+    ) -> Question | None:
+        topic = topic_id(current.id)
+        tree_topic = row.node_index < len(tree.nodes) and topic == tree.nodes[row.node_index].id
+        candidates = tree.nodes[row.node_index].follow_ups if tree_topic else []
+        nxt = hooks.after_answer(row.session_id, current, text, candidates)
+        if nxt is not None:
+            return nxt
+        if tree_topic:
+            row.node_index += 1
+        item = hooks.next_queued(row.session_id, row.leaver, row.role)
+        if item is not None:
+            return Question(id=item.id, axis=item.axis, text=item.text, kind="queued")
+        if row.node_index < len(tree.nodes):
+            return _main_question(tree, row.node_index)
+        return None
+
     def end(self, session_id: str) -> int:
         row = self._get_open(session_id)
         answers = self._store.answers(session_id)
@@ -198,6 +234,11 @@ class SessionService:
         row.ended_at = self._clock()
         row.summary = list(summary)
         self._store.update_session(row)
+        if self._hooks is not None:
+            try:
+                self._hooks.on_end(session_id, row.leaver, row.role, answers)
+            except ProviderError:
+                pass
         return ingested
 
     def view(self, session_id: str) -> SessionView:

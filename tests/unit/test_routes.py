@@ -185,7 +185,7 @@ def test_kb_query_invalid_body(client: TestClient, payload: dict[str, str]) -> N
 def test_kb_query_empty_kb_not_found(client: TestClient) -> None:
     resp = client.post("/kb/query", json={"question": QUERY_HIT})
     assert resp.status_code == 200
-    assert resp.json() == {"found": False, "answer": NOT_FOUND_MESSAGE, "citations": []}
+    assert resp.json() == {"found": False, "answer": NOT_FOUND_MESSAGE, "citations": [], "claims_removed": 0}
 
 
 def test_full_flow_then_kb_hit_and_miss(client: TestClient) -> None:
@@ -209,7 +209,7 @@ def test_full_flow_then_kb_hit_and_miss(client: TestClient) -> None:
 
     miss = client.post("/kb/query", json={"question": QUERY_MISS})
     assert miss.status_code == 200
-    assert miss.json() == {"found": False, "answer": NOT_FOUND_MESSAGE, "citations": []}
+    assert miss.json() == {"found": False, "answer": NOT_FOUND_MESSAGE, "citations": [], "claims_removed": 0}
 
 
 T0 = datetime(2026, 10, 23, 9, 0, tzinfo=UTC)
