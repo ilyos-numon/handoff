@@ -31,6 +31,7 @@ def server_url(tmp_path: Path) -> Iterator[str]:
         **os.environ,
         "HANDOFF_DATA_DIR": str(tmp_path),
         "HANDOFF_PROVIDER": "fake",
+        "HANDOFF_AUTH": "off",
     }
     proc = subprocess.Popen(
         [
@@ -121,6 +122,7 @@ def _launch(data_dir: Path, extra_env: dict[str, str]) -> ServerHandle:
     env = {k: v for k, v in os.environ.items() if k != "HANDOFF_LLM_API_KEY"}
     env["HANDOFF_PROVIDER"] = "fake"
     env["HANDOFF_DATA_DIR"] = str(data_dir)
+    env["HANDOFF_AUTH"] = "off"
     env.update(extra_env)
     proc = subprocess.Popen(
         [

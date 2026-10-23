@@ -301,7 +301,7 @@ def _stop(proc: "subprocess.Popen[bytes]") -> None:
 def launch_server(data_dir: Path) -> Iterator[str]:
     """Start uvicorn on a free port with ``HANDOFF_DATA_DIR=data_dir``; always stop it."""
     port = _free_port()
-    env = {**os.environ, "HANDOFF_DATA_DIR": str(data_dir)}
+    env = {**os.environ, "HANDOFF_DATA_DIR": str(data_dir), "HANDOFF_AUTH": "off"}
     proc = subprocess.Popen(
         [
             sys.executable,

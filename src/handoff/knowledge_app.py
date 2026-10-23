@@ -2,7 +2,8 @@
 
 from dataclasses import dataclass
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from starlette.middleware.sessions import SessionMiddleware
 
 from handoff import (
     routes_artifacts,
@@ -26,6 +27,9 @@ from handoff.knowledge_store import KnowledgeStore
 from handoff.loop import KnowledgeHooks
 from handoff.premortem import PremortemService
 from handoff.providers import LLM
+from handoff.rbac import routes_auth
+from handoff.rbac.deps import authorize
+from handoff.rbac.policy import SESSION_COOKIE, SESSION_MAX_AGE_S, AuthConfig, build_auth
 from handoff.routing import QuestionRouter
 from handoff.sources import SourceService
 from handoff.store import SessionStore
@@ -47,6 +51,7 @@ class KnowledgeServices:
     fence: FenceService
     router: QuestionRouter
     premortem: PremortemService
+    auth: AuthConfig | None = None
 
 
 def build_knowledge(settings: Settings, llm: LLM, session_store: SessionStore) -> KnowledgeServices:
@@ -74,10 +79,22 @@ def build_knowledge(settings: Settings, llm: LLM, session_store: SessionStore) -
         fence=FenceService(llm, store),
         router=router,
         premortem=PremortemService(store),
+        auth=build_auth(settings),
     )
 
 
 def include_knowledge_routers(app: FastAPI) -> None:
+    auth: AuthConfig | None = getattr(getattr(app.state, "knowledge", None), "auth", None)
+    if auth is not None:
+        app.add_middleware(
+            SessionMiddleware,
+            secret_key=auth.secret,
+            session_cookie=SESSION_COOKIE,
+            max_age=SESSION_MAX_AGE_S,
+            same_site="lax",
+            https_only=False,
+        )
+    app.include_router(routes_auth.router)
     for module in (
         routes_sources,
         routes_depth,
@@ -89,4 +106,4 @@ def include_knowledge_routers(app: FastAPI) -> None:
         routes_fence,
         routes_premortem,
     ):
-        app.include_router(module.router)
+        app.include_router(module.router, dependencies=[Depends(authorize)])

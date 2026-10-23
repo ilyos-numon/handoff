@@ -5,7 +5,7 @@ import re
 from pydantic import BaseModel
 
 EMAIL_RE = r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
-PHONE_RE = r"(?<!\d)0\d{1,2}-?\d{3,4}-?\d{4}(?!\d)"
+PHONE_RE = r"(?<![0-9A-Za-z])0\d{1,2}-?\d{3,4}-?\d{4}(?![0-9A-Za-z])"
 HANDLE_RE = r"(?<![A-Za-z0-9.])@[a-z][a-z0-9-]{1,30}"
 EMAIL_MASK = "[이메일]"
 PHONE_MASK = "[전화번호]"

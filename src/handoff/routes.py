@@ -12,6 +12,7 @@ from handoff.coverage import CoverageReport
 from handoff.kb import KBAnswer, KnowledgeBase
 from handoff.providers import ProviderError
 from handoff.question_tree import QuestionTree, UnknownRoleError, load_tree
+from handoff.rbac.deps import authorize
 from handoff.schemas import (
     AnswerRequest,
     AnswerResponse,
@@ -48,7 +49,7 @@ class Services:
     trees: Callable[[str], QuestionTree] = field(default=load_tree)
 
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(authorize)])
 
 
 def get_services(request: Request) -> Services:

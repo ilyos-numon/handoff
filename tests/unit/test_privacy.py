@@ -30,6 +30,18 @@ def test_phone_not_masked_inside_longer_number() -> None:
     assert anonymize(text, {}).replaced == 0
 
 
+def test_phone_masked_when_korean_particle_follows() -> None:
+    result = anonymize("야간에는 010-1234-5678로 연락, 대표 02-123-4567에게", {})
+    assert result.text == f"야간에는 {PHONE_MASK}로 연락, 대표 {PHONE_MASK}에게"
+    assert result.replaced == 2
+
+
+def test_phone_not_masked_inside_hex_id() -> None:
+    for text in ("세션 a0441487887b 종료", "id=0441487887bcd", "f01012345678"):
+        assert anonymize(text, {}).text == text
+        assert find_pii(text) == []
+
+
 def test_role_map_longest_key_first() -> None:
     result = anonymize("@pay 와 @pay-lead 에게", {"@pay": "결제팀", "@pay-lead": "결제팀 리드"})
     assert result.text == "결제팀 와 결제팀 리드 에게"
