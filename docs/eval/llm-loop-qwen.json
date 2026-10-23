@@ -1,16 +1,16 @@
 {
   "name": "llm-loop-qwen",
   "leaver": "eval",
-  "generated_at": "2026-10-23T01:36:25.369934Z",
+  "generated_at": "2026-10-23T01:51:27.589266Z",
   "metrics": {
-    "depth_agree": 0.64,
-    "slot_target": 0.2,
+    "depth_agree": 1.0,
+    "slot_target": 1.0,
     "slot_fill": 1.0,
-    "card_recall": 0.727,
-    "card_evidence": 0.75,
+    "card_recall": 0.818,
+    "card_evidence": 0.889,
     "gap_recall": 1.0,
     "loop_closed": {
-      "n": 1,
+      "n": 2,
       "m": 2
     },
     "artifact_cited": 1.0,
@@ -21,82 +21,79 @@
     "pii_leaks": 0
   },
   "unmet": [
-    "depth_agree",
-    "slot_target",
-    "card_evidence",
-    "loop_closed"
+    "card_evidence"
   ],
   "depth": [
     {
       "question": "매일 새벽 정산 배치가 끝나면 무엇을 하나요?",
-      "agreed": 2,
+      "agreed": 5,
       "target": "why",
-      "follow_slot": "how",
-      "follow_text": "정산 배치 결과 화면에서 처리 건수와 실패 건수를 확인하는 구체적인 방법이나 순서는 어떻게 되나요?",
-      "target_ok": false,
+      "follow_slot": "why",
+      "follow_text": "그렇게 하는 이유를 알려주실 수 있나요?",
+      "target_ok": true,
       "fill_ok": true
     },
     {
       "question": "결제 대행사 연동 키는 어떻게 갱신하나요?",
-      "agreed": 4,
+      "agreed": 5,
       "target": "who",
       "follow_slot": "who",
-      "follow_text": "이 작업은 주로 어떤 역할의 담당자가 수행하나요?",
+      "follow_text": "새 키 발급을 위해 어떤 역할의 담당자에게 연락하나요?",
       "target_ok": true,
       "fill_ok": true
     },
     {
       "question": "새벽 승인 지연 알림이 오면 어떻게 하나요?",
-      "agreed": 3,
+      "agreed": 5,
       "target": "why",
-      "follow_slot": "who",
-      "follow_text": "이 경우 승인 실패율을 누구에게 확인하나요?",
-      "target_ok": false,
+      "follow_slot": "why",
+      "follow_text": "오탐으로 보고 넘어가는 이유를 알려주실 수 있나요?",
+      "target_ok": true,
       "fill_ok": true
     },
     {
       "question": "정산 배치가 실패하면 어떻게 복구하나요?",
-      "agreed": 3,
+      "agreed": 5,
       "target": "why",
-      "follow_slot": "who",
-      "follow_text": "원인을 고칠 때 관련 역할인 개발자나 운영자에게 어떤 지시를 내리나요?",
-      "target_ok": false,
+      "follow_slot": "why",
+      "follow_text": "재실행 스크립트를 사용하여 그 날짜만 다시 돌리는 이유를 알려주실 수 있나요?",
+      "target_ok": true,
       "fill_ok": true
     },
     {
       "question": "일하다 막히면 누구에게 물어보나요?",
-      "agreed": 2,
+      "agreed": 5,
       "target": "why",
-      "follow_slot": null,
-      "follow_text": null,
-      "target_ok": false,
+      "follow_slot": "why",
+      "follow_text": "결제팀 리드에게 먼저 묻는 이유를 알려주실 수 있나요?",
+      "target_ok": true,
       "fill_ok": true
     },
     {
       "question": "결제 원장 테이블을 조회할 때 주의할 점이 있나요?",
-      "agreed": 3,
+      "agreed": 5,
       "target": "when",
-      "follow_slot": "fallback",
-      "follow_text": "거래 일자 조건을 넣었을 때 여전히 성능 문제가 발생한다면, fallback으로 어떤 대안을 고려하시나요?",
-      "target_ok": false,
+      "follow_slot": "when",
+      "follow_text": "거래 일자 조건을 넣는 구체적인 시점은 언제인가요?",
+      "target_ok": true,
       "fill_ok": true
     },
     {
       "question": "인프라 권한은 어떻게 신청하나요?",
-      "agreed": 4,
+      "agreed": 5,
       "target": "when",
-      "follow_slot": "fallback",
-      "follow_text": "인프라팀 요청 게시판이 정상 작동하지 않을 때, 권한 신청을 위한 대체 절차는 무엇인가요?",
-      "target_ok": false,
+      "follow_slot": "when",
+      "follow_text": "인프라 권한 신청은 언제, 어떤 조건에서 진행하시나요?",
+      "target_ok": true,
       "fill_ok": true
     },
     {
       "question": "배포 후에는 무엇을 확인하나요?",
-      "agreed": 2,
+      "agreed": 5,
       "target": "who",
-      "follow_slot": "fallback",
-      "follow_text": "정산 배치 실패 시 fallback으로 어떤 대안을 사용하시나요?",
-      "target_ok": false,
+      "follow_slot": "who",
+      "follow_text": "누구에게 이 상황을 전달하시나요?",
+      "target_ok": true,
       "fill_ok": true
     },
     {
@@ -104,17 +101,17 @@
       "agreed": 5,
       "target": "fallback",
       "follow_slot": "fallback",
-      "follow_text": "만약 월요일 오전에 관리자 화면 접근이 안 될 경우, 미정산 목록을 넘기는 fallback 대안은 무엇인가요?",
+      "follow_text": "원래 방법이 안 되면 어떤 대안을 사용하시나요?",
       "target_ok": true,
       "fill_ok": true
     },
     {
       "question": "결제 대행사 장애가 나면 누구에게 알리나요?",
-      "agreed": 4,
+      "agreed": 5,
       "target": "how",
-      "follow_slot": "fallback",
-      "follow_text": "대행사 장애 시 결제팀 리드에게 알린 후, fallback 대안으로 어떤 조치를 취하나요?",
-      "target_ok": false,
+      "follow_slot": "how",
+      "follow_text": "결제팀 리드에게 알리는 구체적인 방법은 무엇인가요?",
+      "target_ok": true,
       "fill_ok": true
     }
   ],
@@ -135,11 +132,9 @@
       "terms": [
         "미정산"
       ],
-      "card_ids": [
-        "c2"
-      ],
-      "found": true,
-      "evidence_ok": true
+      "card_ids": [],
+      "found": false,
+      "evidence_ok": false
     },
     {
       "type": "pitfall",
@@ -148,7 +143,7 @@
         "일괄 수정"
       ],
       "card_ids": [
-        "c22"
+        "c19"
       ],
       "found": true,
       "evidence_ok": true
@@ -160,8 +155,7 @@
         "결제 개발 채널"
       ],
       "card_ids": [
-        "c6",
-        "c7"
+        "c5"
       ],
       "found": true,
       "evidence_ok": true
@@ -173,10 +167,11 @@
         "재시도"
       ],
       "card_ids": [
-        "c11"
+        "c9",
+        "c10"
       ],
       "found": true,
-      "evidence_ok": false
+      "evidence_ok": true
     },
     {
       "type": "pitfall",
@@ -184,9 +179,11 @@
       "terms": [
         "인증 오류"
       ],
-      "card_ids": [],
-      "found": false,
-      "evidence_ok": false
+      "card_ids": [
+        "c21"
+      ],
+      "found": true,
+      "evidence_ok": true
     },
     {
       "type": "procedure",
@@ -195,7 +192,7 @@
         "영향 범위"
       ],
       "card_ids": [
-        "c17"
+        "c14"
       ],
       "found": true,
       "evidence_ok": true
@@ -207,7 +204,7 @@
         "필드"
       ],
       "card_ids": [
-        "c9"
+        "c6"
       ],
       "found": true,
       "evidence_ok": true
@@ -218,9 +215,11 @@
       "terms": [
         "정산 파일"
       ],
-      "card_ids": [],
-      "found": false,
-      "evidence_ok": false
+      "card_ids": [
+        "c28"
+      ],
+      "found": true,
+      "evidence_ok": true
     },
     {
       "type": "contact",
@@ -229,8 +228,7 @@
         "고객센터"
       ],
       "card_ids": [
-        "c20",
-        "c53"
+        "c17"
       ],
       "found": true,
       "evidence_ok": false
@@ -242,7 +240,7 @@
         "백업 테이블"
       ],
       "card_ids": [
-        "c21"
+        "c18"
       ],
       "found": true,
       "evidence_ok": true
@@ -269,13 +267,13 @@
   "loop": [
     {
       "question": "정산 배치가 실패하면 손으로 어떻게 복구하나요?",
-      "queue_item_id": "q20",
+      "queue_item_id": "q19",
       "closed": true
     },
     {
       "question": "결제 대행사 쪽에 장애가 나면 누구한테 연락해요?",
-      "queue_item_id": null,
-      "closed": false
+      "queue_item_id": "q20",
+      "closed": true
     }
   ],
   "artifacts": [
@@ -299,8 +297,8 @@
     },
     {
       "kind": "adr",
-      "sections": 5,
-      "cited": 5,
+      "sections": 4,
+      "cited": 4,
       "generated": true
     }
   ],
