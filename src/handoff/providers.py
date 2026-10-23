@@ -23,8 +23,13 @@ if TYPE_CHECKING:
         DrillScenario,
         Entity,
         EntityDraft,
+        FenceDraft,
         GeneratedQuestion,
+        InvalidationCondition,
         KnowledgeCard,
+        NewCard,
+        RouteCandidate,
+        RouteDraft,
         Slot,
         SlotJudgement,
         SourceDoc,
@@ -82,6 +87,18 @@ class LLM(Protocol):
     def review_drill(
         self, drill: DrillScenario, cards: list[KnowledgeCard], answer: str
     ) -> DrillFeedbackDraft: ...
+
+    def tacit_follow_up(self, question: str, answer: str, cues: list[str]) -> str: ...
+
+    def annotate_invalidation(
+        self, cards: list[NewCard]
+    ) -> list[list[InvalidationCondition]]: ...
+
+    def route_question(
+        self, question: str, candidates: list[RouteCandidate]
+    ) -> RouteDraft | None: ...
+
+    def explain_fence(self, subject: str, cards: list[KnowledgeCard]) -> FenceDraft: ...
 
 
 def fake_summary(entries: list[KBEntry]) -> list[str]:
@@ -196,6 +213,28 @@ class FakeLLM:
         from handoff.llm_tasks.drill import fake_review_drill
 
         return fake_review_drill(drill, cards, answer)
+
+    def tacit_follow_up(self, question: str, answer: str, cues: list[str]) -> str:
+        from handoff.llm_tasks.tacit import fake_tacit_follow_up
+
+        return fake_tacit_follow_up(question, answer, cues)
+
+    def annotate_invalidation(self, cards: list[NewCard]) -> list[list[InvalidationCondition]]:
+        from handoff.llm_tasks.expiry import fake_annotate_invalidation
+
+        return fake_annotate_invalidation(cards)
+
+    def route_question(
+        self, question: str, candidates: list[RouteCandidate]
+    ) -> RouteDraft | None:
+        from handoff.llm_tasks.routing import fake_route_question
+
+        return fake_route_question(question, candidates)
+
+    def explain_fence(self, subject: str, cards: list[KnowledgeCard]) -> FenceDraft:
+        from handoff.llm_tasks.fence import fake_explain_fence
+
+        return fake_explain_fence(subject, cards)
 
 
 def build_providers(settings: Settings) -> tuple[Embedder, LLM]:

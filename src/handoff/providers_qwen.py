@@ -24,8 +24,13 @@ if TYPE_CHECKING:
         DrillScenario,
         Entity,
         EntityDraft,
+        FenceDraft,
         GeneratedQuestion,
+        InvalidationCondition,
         KnowledgeCard,
+        NewCard,
+        RouteCandidate,
+        RouteDraft,
         Slot,
         SlotJudgement,
         SourceDoc,
@@ -290,6 +295,28 @@ class QwenLLM:
         from handoff.llm_tasks.drill import qwen_review_drill
 
         return qwen_review_drill(self._chat, drill, cards, answer)
+
+    def tacit_follow_up(self, question: str, answer: str, cues: list[str]) -> str:
+        from handoff.llm_tasks.tacit import qwen_tacit_follow_up
+
+        return qwen_tacit_follow_up(self._chat, question, answer, cues)
+
+    def annotate_invalidation(self, cards: list[NewCard]) -> list[list[InvalidationCondition]]:
+        from handoff.llm_tasks.expiry import qwen_annotate_invalidation
+
+        return qwen_annotate_invalidation(self._chat, cards)
+
+    def route_question(
+        self, question: str, candidates: list[RouteCandidate]
+    ) -> RouteDraft | None:
+        from handoff.llm_tasks.routing import qwen_route_question
+
+        return qwen_route_question(self._chat, question, candidates)
+
+    def explain_fence(self, subject: str, cards: list[KnowledgeCard]) -> FenceDraft:
+        from handoff.llm_tasks.fence import qwen_explain_fence
+
+        return qwen_explain_fence(self._chat, subject, cards)
 
 
 class QwenEmbedder:
