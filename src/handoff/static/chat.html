@@ -14,7 +14,14 @@
       <textarea id="chat-input" rows="3" placeholder="궁금한 것을 물어보세요"></textarea>
       <button id="chat-send" type="submit">보내기</button>
     </form>
+    <form id="fence-form">
+      <input id="fence-input" type="text" placeholder="이건 왜 이렇게 되어 있나요? (예: 금요일 배포 금지)">
+      <button id="fence-send" type="submit">이유 묻기</button>
+    </form>
     <p id="chat-error" class="error hidden"></p>
+    <section id="artifacts" class="hidden">
+      <h2>인수인계 산출물</h2>
+    </section>
   </main>
   <script src="/static/chat.js"></script>
 </body>

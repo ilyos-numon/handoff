@@ -68,7 +68,7 @@ def test_chat_answer_and_not_found(
     server = start_server(tmp_path / "data", {})
     _seed_session(server.url, "chat1", [ANSWER_MAIN])
 
-    page.goto(f"{server.url}/chat")
+    page.goto(f"{server.url}/chat?leaver=chat1")
     page.locator("#chat-input").fill(QUERY_HIT)
     page.locator("#chat-send").click()
     expect(page.locator(".citation-meta").first).to_contain_text("세션 1 (")
@@ -80,6 +80,7 @@ def test_chat_answer_and_not_found(
     expect(not_found).to_have_count(1)
     expect(not_found.first).to_contain_text("이 주제는 인수인계에 없습니다")
     expect(not_found.first.locator(".citation")).to_have_count(0)
+    expect(not_found.first.locator(".queued-notice")).to_contain_text("퇴사자 질문 목록에 올렸습니다")
     _shot(page, shot_dir, "05-chat-not-found.png")
 
 
