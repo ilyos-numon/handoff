@@ -23,13 +23,18 @@ SlotState = Literal["filled", "missing", "not_applicable"]
 SourceKind = Literal["wiki", "runbook", "cron", "incident", "commit", "org"]
 EntityType = Literal["system", "job", "incident", "role", "document", "external"]
 CardType = Literal["procedure", "pitfall", "decision", "contact", "entity"]
-QueueSource = Literal["successor", "gap", "generated"]
+QueueSource = Literal["successor", "gap", "premortem", "generated"]
 QueueStatus = Literal["pending", "asked", "answered"]
 GapKind = Literal["mentioned_only", "contradiction", "bus_factor"]
 Risk = Literal["high", "medium", "low"]
-ArtifactKind = Literal["runbook", "onboarding_30d", "pitfalls_top10", "adr"]
+ArtifactKind = Literal["runbook", "onboarding_30d", "pitfalls_top10", "adr", "premortem"]
+Certainty = Literal["certain", "uncertain"]
+ChangeEvent = Literal[
+    "system_replaced", "vendor_changed", "team_reorganized", "policy_changed", "schedule_changed"
+]
+RouteBasis = Literal["contact_card", "people_answer"]
 
-QUEUE_PRIORITY: dict[QueueSource, int] = {"successor": 0, "gap": 1, "generated": 2}
+QUEUE_PRIORITY: dict[QueueSource, int] = {"successor": 0, "gap": 1, "premortem": 2, "generated": 3}
 ENTITY_TYPE_AXIS: dict[EntityType, Axis] = {
     "system": "systems",
     "document": "systems",
@@ -50,15 +55,48 @@ ARTIFACT_CARD_TYPES: dict[ArtifactKind, tuple[CardType, ...]] = {
     "onboarding_30d": ("entity", "contact", "procedure", "pitfall", "decision"),
     "pitfalls_top10": ("pitfall",),
     "adr": ("decision",),
+    "premortem": ("pitfall", "procedure"),
 }
 ARTIFACT_TITLES: dict[ArtifactKind, str] = {
     "runbook": "운영 런북",
     "onboarding_30d": "30일 온보딩 플랜",
     "pitfalls_top10": "함정 Top10",
     "adr": "결정 기록(ADR)",
+    "premortem": "사전 부검: 먼저 터질 일 Top5",
 }
 FAKE_COMPOSE_PREFIX = "인수인계 기록에 따르면:"  # FakeLLM.compose_answer 출력 접두어와 같다
 DEFAULT_ROLE = "backend_developer"
+
+# 조직 변화 이벤트 (호출자가 지정, 자동 감지 없음)
+CHANGE_EVENTS: tuple[ChangeEvent, ...] = (
+    "system_replaced",
+    "vendor_changed",
+    "team_reorganized",
+    "policy_changed",
+    "schedule_changed",
+)
+CHANGE_EVENT_LABELS: dict[ChangeEvent, str] = {
+    "system_replaced": "시스템 교체·이전",
+    "vendor_changed": "외부 업체 변경",
+    "team_reorganized": "조직·담당 변경",
+    "policy_changed": "규정·권한 정책 변경",
+    "schedule_changed": "일정·주기 변경",
+}
+# 사전 부검
+PREMORTEM_QUESTIONS: tuple[str, str, str] = (
+    "내가 떠나고 3개월 뒤 가장 먼저 터질 일은 무엇인가요? 왜 그 일이 먼저 터지나요?",
+    "그 일이 터지기 전에 어떤 징후가 먼저 보이나요? 어디를 보면 알 수 있나요?",
+    "그 일이 터지면 후임이 가장 먼저 해야 할 대응은 무엇인가요?",
+)
+PREMORTEM_REASON = "사전 부검 질문"
+PREMORTEM_TOP = 5
+# 체스터턴의 울타리
+FENCE_REASON = "울타리 근거 없음"
+FENCE_QUEUE_TEMPLATE = "'{subject}' 은 왜 지금 방식으로 되어 있나요? 바꾸거나 없애면 무엇이 깨지나요?"
+# verify_claims 에 넘기는 질문
+FENCE_QUESTION_TEMPLATE = "{subject} 은 왜 지금 방식으로 되어 있고, 바꾸거나 없애면 무엇이 위험한가요?"
+NOT_RECORDED_SIGN = "징후가 기록되지 않았습니다. 퇴사자에게 확인하세요."
+NOT_RECORDED_RESPONSE = "대응이 기록되지 않았습니다. 퇴사자에게 확인하세요."
 
 # 슬롯 판정 fake 단서어 (filled = 답변에 하나라도 포함; fake 는 not_applicable 을 내지 않는다)
 SLOT_CUES: dict[Slot, tuple[str, ...]] = {
@@ -239,6 +277,11 @@ class CardDraft(BaseModel):
     evidence_question_ids: list[str] = Field(min_length=1)
 
 
+class InvalidationCondition(BaseModel):
+    event: ChangeEvent
+    condition: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+
+
 class NewCard(BaseModel):
     leaver: str
     role: str
@@ -249,11 +292,27 @@ class NewCard(BaseModel):
     entities: list[str]
     confidence: float
     evidence: list[Evidence] = Field(min_length=1)
+    certainty: Certainty = "certain"
+    uncertain_cues: list[str] = []
+    invalidated_when: list[InvalidationCondition] = Field(default_factory=list, max_length=3)
 
 
 class KnowledgeCard(NewCard):
     id: str  # "c<int>"
     created_at: datetime
+
+
+class AtRiskCard(BaseModel):
+    card: KnowledgeCard
+    conditions: list[InvalidationCondition]  # 그 이벤트 조건만
+
+
+class AtRiskReport(BaseModel):
+    leaver: str
+    event: ChangeEvent
+    label: str
+    target: str | None
+    cards: list[AtRiskCard]
 
 
 # ---- 빈 구멍
@@ -279,10 +338,18 @@ class Gap(NewGap):
     created_at: datetime
 
 
+class UnknownArea(BaseModel):
+    topic: str
+    card_ids: list[str] = Field(min_length=1)
+    cues: list[str]
+    detail: str
+
+
 class GapReport(BaseModel):
     leaver: str
     gaps: list[Gap]
     queued: list[QueueItem]
+    unknown_areas: list[UnknownArea] = []
 
 
 # ---- 검증·후임 루프
@@ -305,8 +372,65 @@ class AskRequest(BaseModel):
     leaver: LeaverId
 
 
+class RouteCandidate(BaseModel):
+    ref: str  # 카드면 "c<int>", 답변이면 "a:<session_id>:<question_id>"
+    basis: RouteBasis
+    text: str
+    roles: list[str] = Field(min_length=1)
+
+
+class RouteDraft(BaseModel):
+    ref: str
+    role: str
+
+
+class AskRoute(BaseModel):
+    ask_role: str
+    reason: str
+    basis: RouteBasis
+    card_ids: list[str]
+    question_ids: list[str]
+
+
 class AskResponse(BaseModel):
     answer: KBAnswer
+    queued: QueueItem | None
+    route: AskRoute | None = None
+    certainty: Certainty | None = None
+
+
+# ---- 암묵지 꼬리 질문
+class TacitFollowUpResponse(BaseModel):
+    cues: list[str]
+    text: str | None  # cues 없으면 None
+
+
+# ---- 체스터턴의 울타리
+class FenceRequest(BaseModel):
+    leaver: LeaverId
+    subject: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+    role: str = DEFAULT_ROLE
+
+
+class FencePoint(BaseModel):
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
+    card_ids: list[str] = Field(min_length=1)
+
+
+class FenceDraft(BaseModel):
+    reasons: list[FencePoint] = []
+    risks: list[FencePoint] = []
+
+
+class FenceResponse(BaseModel):
+    subject: str
+    found: bool
+    reasons: list[FencePoint]
+    risks: list[FencePoint]
+    cards: list[KnowledgeCard]
+    invalidated_when: list[InvalidationCondition]
+    certainty: Certainty | None
+    claims_removed: int
     queued: QueueItem | None
 
 

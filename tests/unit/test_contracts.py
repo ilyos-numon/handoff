@@ -113,7 +113,7 @@ def test_constant_tables_cover_literals() -> None:
     assert set(SLOT_CUES) == set(SLOTS)
     assert set(SLOT_FOLLOW_UP_TEMPLATES) == set(SLOTS)
     assert set(SLOT_TARGET_CUES) == set(SLOTS)
-    assert QUEUE_PRIORITY == {"successor": 0, "gap": 1, "generated": 2}
+    assert QUEUE_PRIORITY == {"successor": 0, "gap": 1, "premortem": 2, "generated": 3}
     assert set(ENTITY_TYPE_AXIS) == {"system", "job", "incident", "role", "document", "external"}
     assert set(CARD_TYPE_AXIS) == {"procedure", "pitfall", "decision", "contact", "entity"}
     assert set(ARTIFACT_CARD_TYPES) == set(ARTIFACT_TITLES)
@@ -184,3 +184,80 @@ def _citation() -> c.Citation:
         score=0.9,
         created_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
+
+
+def test_honesty_constants() -> None:
+    assert ARTIFACT_CARD_TYPES["premortem"] == ("pitfall", "procedure")
+    assert ARTIFACT_TITLES["premortem"] == "사전 부검: 먼저 터질 일 Top5"
+    assert c.CHANGE_EVENTS == (
+        "system_replaced",
+        "vendor_changed",
+        "team_reorganized",
+        "policy_changed",
+        "schedule_changed",
+    )
+    assert set(c.CHANGE_EVENT_LABELS) == set(c.CHANGE_EVENTS)
+    assert len(c.PREMORTEM_QUESTIONS) == 3
+    assert c.PREMORTEM_TOP == 5
+    assert "{subject}" in c.FENCE_QUEUE_TEMPLATE
+    assert "{subject}" in c.FENCE_QUESTION_TEMPLATE
+
+
+def _new_card_kwargs() -> dict[str, object]:
+    return {
+        "leaver": "kim",
+        "role": c.DEFAULT_ROLE,
+        "session_id": "s1",
+        "type": "pitfall",
+        "title": "t",
+        "body": "b",
+        "entities": [],
+        "confidence": 0.5,
+        "evidence": [
+            c.Evidence(session_id="s1", question_id="sys-01", session_number=1, excerpt="e")
+        ],
+    }
+
+
+def test_new_card_defaults_keep_existing_construction() -> None:
+    card = c.NewCard(**_new_card_kwargs())  # type: ignore[arg-type]
+    assert card.certainty == "certain"
+    assert card.uncertain_cues == []
+    assert card.invalidated_when == []
+    full = c.KnowledgeCard(
+        **_new_card_kwargs(),  # type: ignore[arg-type]
+        id="c1",
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    assert full.certainty == "certain"
+
+
+def test_new_card_invalidated_when_max_three() -> None:
+    cond = c.InvalidationCondition(event="vendor_changed", condition="업체가 바뀌면")
+    with pytest.raises(ValidationError):
+        c.NewCard(**_new_card_kwargs(), invalidated_when=[cond] * 4)  # type: ignore[arg-type]
+    with pytest.raises(ValidationError):
+        c.InvalidationCondition(event="moved", condition="x")  # type: ignore[arg-type]
+    with pytest.raises(ValidationError):
+        c.InvalidationCondition(event="vendor_changed", condition="  ")
+
+
+def test_honesty_models_defaults_and_validation() -> None:
+    answer = c.KBAnswer(found=False, answer="", citations=[])
+    response = c.AskResponse(answer=answer, queued=None)
+    assert response.route is None and response.certainty is None
+    report = c.GapReport(leaver="kim", gaps=[], queued=[])
+    assert report.unknown_areas == []
+    with pytest.raises(ValidationError):
+        c.UnknownArea(topic="t", card_ids=[], cues=[], detail="d")
+    with pytest.raises(ValidationError):
+        c.RouteCandidate(ref="c1", basis="contact_card", text="t", roles=[])
+    with pytest.raises(ValidationError):
+        c.FenceRequest(leaver="kim", subject="   ")
+    assert c.FenceRequest(leaver="kim", subject=" 야간 배치 ").subject == "야간 배치"
+    assert c.FenceRequest(leaver="kim", subject="x").role == c.DEFAULT_ROLE
+    with pytest.raises(ValidationError):
+        c.FencePoint(text="t", card_ids=[])
+    draft = c.FenceDraft()
+    assert draft.reasons == [] and draft.risks == []
+    assert c.TacitFollowUpResponse(cues=[], text=None).text is None

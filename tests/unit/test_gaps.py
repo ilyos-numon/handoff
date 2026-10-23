@@ -369,7 +369,7 @@ def test_routes_default_role_and_validation(ks: KnowledgeStore, sessions: Sessio
     assert client.get(f"/leavers/{LEAVER}/queue", params={"status": "done"}).status_code == 422
     assert client.get(f"/leavers/{LEAVER}/queue", params={"source": "x"}).status_code == 422
     empty = client.get("/leavers/nobody/gaps").json()
-    assert empty == {"leaver": "nobody", "gaps": [], "queued": []}
+    assert empty == {"leaver": "nobody", "gaps": [], "queued": [], "unknown_areas": []}
 
 
 def test_route_refresh_provider_error_is_503() -> None:

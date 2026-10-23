@@ -215,3 +215,15 @@ def test_invalid_loop_integers_name_variable(name: str, value: str) -> None:
 def test_verify_claims_rejects_non_on_off(value: str) -> None:
     with pytest.raises(ValueError, match="HANDOFF_VERIFY_CLAIMS must be on or off"):
         load_settings({"HANDOFF_VERIFY_CLAIMS": value})
+
+
+def test_tacit_followups_default_and_override() -> None:
+    assert load_settings({}).tacit_followups is True
+    assert load_settings({"HANDOFF_TACIT_FOLLOWUPS": "off"}).tacit_followups is False
+    assert load_settings({"HANDOFF_TACIT_FOLLOWUPS": "on"}).tacit_followups is True
+
+
+@pytest.mark.parametrize("value", ["yes", "true", "OFF", "0", ""])
+def test_tacit_followups_rejects_non_on_off(value: str) -> None:
+    with pytest.raises(ValueError, match="HANDOFF_TACIT_FOLLOWUPS must be on or off"):
+        load_settings({"HANDOFF_TACIT_FOLLOWUPS": value})

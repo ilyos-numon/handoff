@@ -30,6 +30,7 @@ class Settings:
     depth_max_followups: int = 1
     queue_per_session: int = 2
     verify_claims: bool = True
+    tacit_followups: bool = True
 
 
 def _float(source: Mapping[str, str], name: str, default: float) -> float:
@@ -92,6 +93,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         depth_max_followups=_int(source, "HANDOFF_DEPTH_MAX_FOLLOWUPS", 1, 0),
         queue_per_session=_int(source, "HANDOFF_QUEUE_PER_SESSION", 2, 0),
         verify_claims=_on_off(source, "HANDOFF_VERIFY_CLAIMS", True),
+        tacit_followups=_on_off(source, "HANDOFF_TACIT_FOLLOWUPS", True),
     )
 
 
