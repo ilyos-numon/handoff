@@ -39,6 +39,7 @@ from handoff.store import SessionStore
 from handoff.verify import ClaimVerifier, SuccessorService
 
 if TYPE_CHECKING:
+    from handoff.demo.guard import DemoGuardConfig
     from handoff.demo.routes import DemoRuntime
 
 
@@ -61,6 +62,7 @@ class KnowledgeServices:
     admin: LeaverRegistry | None = None
     public_url: str = ""
     demo: "DemoRuntime | None" = None
+    demo_guard: "DemoGuardConfig | None" = None
 
 
 def _build_demo(settings: Settings, llm: LLM) -> "DemoRuntime | None":
@@ -78,6 +80,18 @@ def _build_demo(settings: Settings, llm: LLM) -> "DemoRuntime | None":
             settings.demo_max_sandboxes,
         ),
         llm_stats=stats if callable(stats) else None,
+    )
+
+
+def _build_demo_guard(settings: Settings) -> "DemoGuardConfig | None":
+    if not settings.demo:
+        return None
+    from handoff.demo.guard import DemoGuardConfig  # see _build_demo
+
+    return DemoGuardConfig(
+        max_body_bytes=settings.demo_max_body_bytes,
+        rate=settings.demo_rate,
+        start_rate=settings.demo_start_rate,
     )
 
 
@@ -110,13 +124,21 @@ def build_knowledge(settings: Settings, llm: LLM, session_store: SessionStore) -
         admin=LeaverRegistry(settings.data_dir / "admin.db") if settings.auth else None,
         public_url=settings.public_url,
         demo=_build_demo(settings, llm),
+        demo_guard=_build_demo_guard(settings),
     )
 
 
 def include_knowledge_routers(app: FastAPI) -> None:
     from handoff.demo import routes as demo_routes  # see _build_demo
+    from handoff.demo.guard import DemoGuardConfig, install_demo_guard
 
-    auth: AuthConfig | None = getattr(getattr(app.state, "knowledge", None), "auth", None)
+    knowledge = getattr(app.state, "knowledge", None)
+    auth: AuthConfig | None = getattr(knowledge, "auth", None)
+    guard: DemoGuardConfig | None = getattr(knowledge, "demo_guard", None)
+    if getattr(knowledge, "demo", None) is not None and guard is not None:
+        # Before SessionMiddleware: the last added middleware runs first, so the
+        # session stays outermost and the guards run inside it.
+        install_demo_guard(app, guard)
     if auth is not None:
         app.add_middleware(
             SessionMiddleware,

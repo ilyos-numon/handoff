@@ -1,17 +1,19 @@
 """FastAPI dependency that enforces the role-to-route policy."""
 
+import time
 from typing import Any
 
 from fastapi import HTTPException, Request, status
 from pydantic import ValidationError
 
 from handoff.rbac.policy import ROUTE_SCOPES, AuthConfig, is_allowed
-from handoff.rbac.tokens import Principal
+from handoff.rbac.tokens import ROLES, Principal
 from handoff.session import SessionNotFoundError
 
 LOGIN_REQUIRED = "login required"
 FORBIDDEN = "forbidden"
 DEFAULT_LEAVER = "default"
+DEMO_ROLE_HEADER = "X-Handoff-As"
 
 
 def get_auth(request: Request) -> AuthConfig | None:
@@ -21,11 +23,35 @@ def get_auth(request: Request) -> AuthConfig | None:
     return auth
 
 
+def _demo_header_role(request: Request, data: Any) -> str | None:
+    """Return the ``X-Handoff-As`` role only for a live demo sandbox cookie."""
+    role = request.headers.get(DEMO_ROLE_HEADER)
+    if role not in ROLES or get_auth(request) is None:
+        return None
+    knowledge = getattr(request.app.state, "knowledge", None)
+    if getattr(knowledge, "demo", None) is None:
+        return None
+    exp = data.get("demo_exp")
+    if data.get("demo") is not True or not isinstance(exp, int) or exp <= time.time():
+        return None
+    return role
+
+
 def current_principal(request: Request) -> Principal | None:
-    """Return the signed-in principal from the session cookie, if any."""
+    """Return the signed-in principal from the session cookie, if any.
+
+    Inside a live demo sandbox the ``X-Handoff-As`` header picks the role, so the
+    three side-by-side panes can share one cookie. Everywhere else it is ignored.
+    """
     if "session" not in request.scope:
         return None
     data = request.session
+    header_role = _demo_header_role(request, data)
+    if header_role is not None:
+        try:
+            return Principal.model_validate({"role": header_role, "leaver": data.get("leaver")})
+        except ValidationError:
+            return None
     try:
         return Principal.model_validate({"role": data.get("role"), "leaver": data.get("leaver")})
     except ValidationError:

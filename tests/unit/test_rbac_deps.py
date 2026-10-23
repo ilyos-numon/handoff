@@ -332,3 +332,62 @@ def test_cli_rejects_bad_role_and_leaver(tmp_path: Path) -> None:
     bad_leaver = _cli(["invite", "--role", "manager", "--leaver", "Kim Lee"], tmp_path)
     assert bad_leaver.returncode == 2
     assert bad_leaver.stdout == ""
+
+
+# --- X-Handoff-As demo role header --------------------------------------------
+
+DEMO_HEADER = "X-Handoff-As"
+
+
+def _demo_app(auth: AuthConfig, *, demo_on: bool = True) -> FastAPI:
+    app = _app(auth)
+    app.state.knowledge.demo = object() if demo_on else None
+
+    @app.post("/test/demo-cookie")
+    def demo_cookie(request: Request, exp_offset: int = 600) -> dict[str, str]:
+        import time
+
+        request.session.update(
+            {
+                "role": "manager",
+                "leaver": "kim",
+                "demo": True,
+                "demo_exp": int(time.time()) + exp_offset,
+            }
+        )
+        return {"ok": "yes"}
+
+    return app
+
+
+def test_demo_header_selects_role_for_live_demo_cookie(auth: AuthConfig) -> None:
+    client = TestClient(_demo_app(auth), follow_redirects=False)
+    client.post("/test/demo-cookie")
+    assert client.post("/kb/ask", json={"leaver": "kim"}).status_code == 403
+    res = client.post("/kb/ask", json={"leaver": "kim"}, headers={DEMO_HEADER: "successor"})
+    assert res.status_code == 200
+    other = client.post("/kb/ask", json={"leaver": "lee"}, headers={DEMO_HEADER: "successor"})
+    assert other.status_code == 403
+    me = client.get("/auth/me", headers={DEMO_HEADER: "leaver"}).json()
+    assert me == {"auth": True, "role": "leaver", "leaver": "kim"}
+
+
+def test_demo_header_ignored_for_regular_cookie(auth: AuthConfig) -> None:
+    client = TestClient(_demo_app(auth), follow_redirects=False)
+    _login(client, "manager")
+    res = client.post("/kb/ask", json={"leaver": "kim"}, headers={DEMO_HEADER: "successor"})
+    assert res.status_code == 403
+    assert client.get("/auth/me", headers={DEMO_HEADER: "successor"}).json()["role"] == "manager"
+
+
+def test_demo_header_ignored_when_expired_demo_off_or_bad_role(auth: AuthConfig) -> None:
+    expired = TestClient(_demo_app(auth), follow_redirects=False)
+    expired.post("/test/demo-cookie", params={"exp_offset": -1})
+    assert expired.get("/auth/me", headers={DEMO_HEADER: "successor"}).json()["role"] == "manager"
+    off = TestClient(_demo_app(auth, demo_on=False), follow_redirects=False)
+    off.post("/test/demo-cookie")
+    assert off.get("/auth/me", headers={DEMO_HEADER: "successor"}).json()["role"] == "manager"
+    live = TestClient(_demo_app(auth), follow_redirects=False)
+    live.post("/test/demo-cookie")
+    for role in ("admin", "anonymous", "Successor"):
+        assert live.get("/auth/me", headers={DEMO_HEADER: role}).json()["role"] == "manager"
