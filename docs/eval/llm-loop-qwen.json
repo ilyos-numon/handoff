@@ -1,0 +1,329 @@
+{
+  "name": "llm-loop-qwen",
+  "leaver": "eval",
+  "generated_at": "2026-10-23T01:36:25.369934Z",
+  "metrics": {
+    "depth_agree": 0.64,
+    "slot_target": 0.2,
+    "slot_fill": 1.0,
+    "card_recall": 0.727,
+    "card_evidence": 0.75,
+    "gap_recall": 1.0,
+    "loop_closed": {
+      "n": 1,
+      "m": 2
+    },
+    "artifact_cited": 1.0,
+    "drill_ok": {
+      "n": 2,
+      "m": 2
+    },
+    "pii_leaks": 0
+  },
+  "unmet": [
+    "depth_agree",
+    "slot_target",
+    "card_evidence",
+    "loop_closed"
+  ],
+  "depth": [
+    {
+      "question": "매일 새벽 정산 배치가 끝나면 무엇을 하나요?",
+      "agreed": 2,
+      "target": "why",
+      "follow_slot": "how",
+      "follow_text": "정산 배치 결과 화면에서 처리 건수와 실패 건수를 확인하는 구체적인 방법이나 순서는 어떻게 되나요?",
+      "target_ok": false,
+      "fill_ok": true
+    },
+    {
+      "question": "결제 대행사 연동 키는 어떻게 갱신하나요?",
+      "agreed": 4,
+      "target": "who",
+      "follow_slot": "who",
+      "follow_text": "이 작업은 주로 어떤 역할의 담당자가 수행하나요?",
+      "target_ok": true,
+      "fill_ok": true
+    },
+    {
+      "question": "새벽 승인 지연 알림이 오면 어떻게 하나요?",
+      "agreed": 3,
+      "target": "why",
+      "follow_slot": "who",
+      "follow_text": "이 경우 승인 실패율을 누구에게 확인하나요?",
+      "target_ok": false,
+      "fill_ok": true
+    },
+    {
+      "question": "정산 배치가 실패하면 어떻게 복구하나요?",
+      "agreed": 3,
+      "target": "why",
+      "follow_slot": "who",
+      "follow_text": "원인을 고칠 때 관련 역할인 개발자나 운영자에게 어떤 지시를 내리나요?",
+      "target_ok": false,
+      "fill_ok": true
+    },
+    {
+      "question": "일하다 막히면 누구에게 물어보나요?",
+      "agreed": 2,
+      "target": "why",
+      "follow_slot": null,
+      "follow_text": null,
+      "target_ok": false,
+      "fill_ok": true
+    },
+    {
+      "question": "결제 원장 테이블을 조회할 때 주의할 점이 있나요?",
+      "agreed": 3,
+      "target": "when",
+      "follow_slot": "fallback",
+      "follow_text": "거래 일자 조건을 넣었을 때 여전히 성능 문제가 발생한다면, fallback으로 어떤 대안을 고려하시나요?",
+      "target_ok": false,
+      "fill_ok": true
+    },
+    {
+      "question": "인프라 권한은 어떻게 신청하나요?",
+      "agreed": 4,
+      "target": "when",
+      "follow_slot": "fallback",
+      "follow_text": "인프라팀 요청 게시판이 정상 작동하지 않을 때, 권한 신청을 위한 대체 절차는 무엇인가요?",
+      "target_ok": false,
+      "fill_ok": true
+    },
+    {
+      "question": "배포 후에는 무엇을 확인하나요?",
+      "agreed": 2,
+      "target": "who",
+      "follow_slot": "fallback",
+      "follow_text": "정산 배치 실패 시 fallback으로 어떤 대안을 사용하시나요?",
+      "target_ok": false,
+      "fill_ok": true
+    },
+    {
+      "question": "매주 월요일 미정산 목록은 어떻게 넘기나요?",
+      "agreed": 5,
+      "target": "fallback",
+      "follow_slot": "fallback",
+      "follow_text": "만약 월요일 오전에 관리자 화면 접근이 안 될 경우, 미정산 목록을 넘기는 fallback 대안은 무엇인가요?",
+      "target_ok": true,
+      "fill_ok": true
+    },
+    {
+      "question": "결제 대행사 장애가 나면 누구에게 알리나요?",
+      "agreed": 4,
+      "target": "how",
+      "follow_slot": "fallback",
+      "follow_text": "대행사 장애 시 결제팀 리드에게 알린 후, fallback 대안으로 어떤 조치를 취하나요?",
+      "target_ok": false,
+      "fill_ok": true
+    }
+  ],
+  "cards": [
+    {
+      "type": "pitfall",
+      "node": "rou-02",
+      "terms": [
+        "금요일"
+      ],
+      "card_ids": [],
+      "found": false,
+      "evidence_ok": false
+    },
+    {
+      "type": "procedure",
+      "node": "rou-01",
+      "terms": [
+        "미정산"
+      ],
+      "card_ids": [
+        "c2"
+      ],
+      "found": true,
+      "evidence_ok": true
+    },
+    {
+      "type": "pitfall",
+      "node": "sys-04",
+      "terms": [
+        "일괄 수정"
+      ],
+      "card_ids": [
+        "c22"
+      ],
+      "found": true,
+      "evidence_ok": true
+    },
+    {
+      "type": "contact",
+      "node": "ppl-01",
+      "terms": [
+        "결제 개발 채널"
+      ],
+      "card_ids": [
+        "c6",
+        "c7"
+      ],
+      "found": true,
+      "evidence_ok": true
+    },
+    {
+      "type": "pitfall",
+      "node": "sys-03",
+      "terms": [
+        "재시도"
+      ],
+      "card_ids": [
+        "c11"
+      ],
+      "found": true,
+      "evidence_ok": false
+    },
+    {
+      "type": "pitfall",
+      "node": "rou-04",
+      "terms": [
+        "인증 오류"
+      ],
+      "card_ids": [],
+      "found": false,
+      "evidence_ok": false
+    },
+    {
+      "type": "procedure",
+      "node": "inc-03",
+      "terms": [
+        "영향 범위"
+      ],
+      "card_ids": [
+        "c17"
+      ],
+      "found": true,
+      "evidence_ok": true
+    },
+    {
+      "type": "pitfall",
+      "node": "sys-02",
+      "terms": [
+        "필드"
+      ],
+      "card_ids": [
+        "c9"
+      ],
+      "found": true,
+      "evidence_ok": true
+    },
+    {
+      "type": "pitfall",
+      "node": "rou-05",
+      "terms": [
+        "정산 파일"
+      ],
+      "card_ids": [],
+      "found": false,
+      "evidence_ok": false
+    },
+    {
+      "type": "contact",
+      "node": "ppl-04",
+      "terms": [
+        "고객센터"
+      ],
+      "card_ids": [
+        "c20",
+        "c53"
+      ],
+      "found": true,
+      "evidence_ok": false
+    },
+    {
+      "type": "procedure",
+      "node": "sys-04",
+      "terms": [
+        "백업 테이블"
+      ],
+      "card_ids": [
+        "c21"
+      ],
+      "found": true,
+      "evidence_ok": true
+    }
+  ],
+  "gaps": [
+    {
+      "topic": "수수료 검증",
+      "found": true
+    },
+    {
+      "topic": "정산 배치 재실행",
+      "found": true
+    },
+    {
+      "topic": "대행사 장애 연락망",
+      "found": true
+    },
+    {
+      "topic": "로그 보관",
+      "found": true
+    }
+  ],
+  "loop": [
+    {
+      "question": "정산 배치가 실패하면 손으로 어떻게 복구하나요?",
+      "queue_item_id": "q20",
+      "closed": true
+    },
+    {
+      "question": "결제 대행사 쪽에 장애가 나면 누구한테 연락해요?",
+      "queue_item_id": null,
+      "closed": false
+    }
+  ],
+  "artifacts": [
+    {
+      "kind": "runbook",
+      "sections": 15,
+      "cited": 15,
+      "generated": true
+    },
+    {
+      "kind": "onboarding_30d",
+      "sections": 4,
+      "cited": 4,
+      "generated": true
+    },
+    {
+      "kind": "pitfalls_top10",
+      "sections": 10,
+      "cited": 10,
+      "generated": true
+    },
+    {
+      "kind": "adr",
+      "sections": 5,
+      "cited": 5,
+      "generated": true
+    }
+  ],
+  "drill": [
+    {
+      "label": "weak",
+      "expected": 5,
+      "covered": 0,
+      "missed": 5,
+      "ok": true
+    },
+    {
+      "label": "first_point",
+      "expected": 5,
+      "covered": 1,
+      "missed": 4,
+      "ok": true
+    }
+  ],
+  "pii_by_source": {
+    "cards": 0,
+    "gaps": 0,
+    "artifacts": 0,
+    "queue": 0
+  }
+}
