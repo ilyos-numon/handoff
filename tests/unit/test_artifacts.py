@@ -383,3 +383,31 @@ def test_route_provider_error_503(ks: KnowledgeStore) -> None:
     _full(ks)
     r = _client(ks, StubLLM(error=True)).post("/leavers/alice/artifacts/runbook")
     assert r.status_code == 503 and r.json()["detail"] == PROVIDER_UNAVAILABLE
+
+
+# ---- premortem 추가 (기존 4종 무변경)
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_existing_kinds_fake_ignores_input_order(ks: KnowledgeStore, kind: ArtifactKind) -> None:
+    cards = _full(ks)
+    assert fake_write_artifact(kind, list(reversed(cards))) == fake_write_artifact(kind, cards)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_existing_kinds_ignore_premortem_queue(ks: KnowledgeStore, kind: ArtifactKind) -> None:
+    cards = _full(ks)
+    svc = ArtifactService(FakeLLM(), ks, clock=lambda: T0)
+    before = svc.generate("alice", kind).sections
+    ks.enqueue("alice", "backend_developer", "premortem", "incidents", "부검", "사전 부검 질문",
+               None, T0)
+    assert svc.generate("alice", kind).sections == before == fake_write_artifact(kind, cards)
+
+
+def test_generate_premortem_with_fake(ks: KnowledgeStore) -> None:
+    cards = _full(ks)
+    art = ArtifactService(FakeLLM(), ks, clock=lambda: T0).generate("alice", "premortem")
+    pit = sorted((c for c in cards if c.type == "pitfall"),
+                 key=lambda c: (-c.confidence, int(c.id[1:])))
+    assert [s.card_ids[0] for s in art.sections] == [c.id for c in pit]
+    assert all("징후:" in s.body and "대응:" in s.body for s in art.sections)
+    assert art.title == ARTIFACT_TITLES["premortem"]

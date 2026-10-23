@@ -7,7 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, sta
 from handoff.cards import CardService
 from handoff.contracts import (
     PROVIDER_UNAVAILABLE,
+    AtRiskReport,
     CardType,
+    Certainty,
+    ChangeEvent,
     KnowledgeCard,
     KnowledgeConflict,
     KnowledgeNotFound,
@@ -33,8 +36,19 @@ def list_cards(
     service: CardServiceDep,
     card_type: Annotated[CardType | None, Query(alias="type")] = None,
     min_confidence: Annotated[float, Query(ge=0.0, le=1.0)] = 0.0,
+    certainty: Annotated[Certainty | None, Query()] = None,
 ) -> list[KnowledgeCard]:
-    return service.list(leaver, card_type, min_confidence)
+    return service.list(leaver, card_type, min_confidence, certainty)
+
+
+@router.get("/leavers/{leaver}/cards/at-risk", response_model=AtRiskReport)
+def cards_at_risk(
+    leaver: LeaverPath,
+    service: CardServiceDep,
+    event: Annotated[ChangeEvent, Query()],
+    target: Annotated[str | None, Query()] = None,
+) -> AtRiskReport:
+    return service.at_risk(leaver, event, target)
 
 
 @router.post("/sessions/{session_id}/cards/extract", response_model=list[KnowledgeCard])

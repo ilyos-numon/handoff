@@ -9,12 +9,16 @@ from fastapi.testclient import TestClient
 
 from handoff.cards import CardService
 from handoff.contracts import (
+    CHANGE_EVENT_LABELS,
     SESSION_NOT_FOUND,
     SESSION_OPEN,
     CardDraft,
     EntityDraft,
+    InvalidationCondition,
+    KnowledgeCard,
     KnowledgeConflict,
     KnowledgeNotFound,
+    NewCard,
 )
 from handoff.kb import KBEntry
 from handoff.knowledge_store import KnowledgeStore
@@ -22,6 +26,7 @@ from handoff.llm_tasks.cards import fake_extract_cards, qwen_extract_cards
 from handoff.privacy import find_pii
 from handoff.providers import FakeLLM, ProviderError
 from handoff.routes_cards import router
+from handoff.signals import UNCERTAIN_CONFIDENCE_MAX, fake_invalidation
 from handoff.store import SessionRow, SessionStore
 
 T0 = datetime(2026, 10, 23, 9, 0, tzinfo=UTC)
@@ -432,3 +437,181 @@ def test_route_provider_error_503(sessions: SessionStore, kstore: KnowledgeStore
     with _client(_service(sessions, kstore, StubLLM(fail=True))) as c:
         r = c.post("/sessions/s1/cards/extract")
     assert r.status_code == 503 and r.json()["detail"] == "provider unavailable"
+
+
+# ---- S5: 확신도·유통기한·at-risk
+UNSURE_ANSWER = "아마 금요일 배포는 하지 않습니다. 전임자가 그렇게 정했던 것 같습니다."
+
+
+class AnnotateLLM(FakeLLM):
+    def __init__(self, result: list[list[InvalidationCondition]] | None = None,
+                 fail: bool = False) -> None:
+        self.result = result
+        self.fail = fail
+        self.calls: list[list[NewCard]] = []
+
+    def annotate_invalidation(self, cards: list[NewCard]) -> list[list[InvalidationCondition]]:
+        self.calls.append(cards)
+        if self.fail:
+            raise ProviderError("down")
+        assert self.result is not None
+        return self.result
+
+
+def _unsure_session(sessions: SessionStore) -> None:
+    _session(sessions, "s3", number=3)
+    sessions.add_answer(_entry("sys-02", UNSURE_ANSWER, session_id="s3"))
+
+
+def test_extract_marks_uncertain_card(sessions: SessionStore, kstore: KnowledgeStore) -> None:
+    _unsure_session(sessions)
+    cards = _service(sessions, kstore).extract_for_session("s3")
+    assert cards
+    pitfall = next(c for c in cards if c.type == "pitfall")
+    assert pitfall.certainty == "uncertain"
+    assert pitfall.uncertain_cues[0] == "아마"
+    assert pitfall.confidence <= UNCERTAIN_CONFIDENCE_MAX
+
+
+def test_extract_certain_answer_stays_certain(sessions: SessionStore, kstore: KnowledgeStore) -> None:
+    cards = _service(sessions, kstore).extract_for_session("s1")
+    assert cards and all(c.certainty == "certain" and c.uncertain_cues == [] for c in cards)
+    assert any(c.confidence > UNCERTAIN_CONFIDENCE_MAX for c in cards)
+
+
+def test_extract_annotates_with_llm_conditions(sessions: SessionStore, kstore: KnowledgeStore) -> None:
+    drafts = [
+        CardDraft(type="procedure", title="로그 확인", body="로그를 확인", confidence=0.7,
+                  evidence_question_ids=["sys-01"]),
+        CardDraft(type="contact", title="운영 리드", body="리드에게 연락", confidence=0.7,
+                  evidence_question_ids=["sys-01-f1"]),
+    ]
+    cond = InvalidationCondition(event="policy_changed", condition="규정이 바뀌면 틀립니다.")
+    llm = AnnotateLLM([[cond], []])
+    llm_drafts = StubLLM(drafts)
+    llm.extract_cards = llm_drafts.extract_cards  # type: ignore[method-assign]
+    cards = _service(sessions, kstore, llm).extract_for_session("s1")
+    assert [c.title for c in llm.calls[0]] == ["로그 확인", "운영 리드"]
+    assert [c.invalidated_when for c in cards] == [[cond], []]
+    stored = _service(sessions, kstore).list(LEAVER, None, 0.0)
+    assert [c.invalidated_when for c in stored] == [[cond], []]
+
+
+def _fake_conditions(cards: list[KnowledgeCard]) -> list[list[InvalidationCondition]]:
+    return [fake_invalidation(f"{c.title} {c.body}") for c in cards]
+
+
+def test_extract_provider_error_uses_fake_conditions(
+    sessions: SessionStore, kstore: KnowledgeStore
+) -> None:
+    cards = _service(sessions, kstore, AnnotateLLM(fail=True)).extract_for_session("s1")
+    assert cards
+    assert [c.invalidated_when for c in cards] == _fake_conditions(cards)
+    assert any(c.invalidated_when for c in cards)
+
+
+def test_extract_length_mismatch_uses_fake_conditions(
+    sessions: SessionStore, kstore: KnowledgeStore
+) -> None:
+    bogus = [[InvalidationCondition(event="policy_changed", condition="x")]]
+    cards = _service(sessions, kstore, AnnotateLLM(bogus * 99)).extract_for_session("s1")
+    assert [c.invalidated_when for c in cards] == _fake_conditions(cards)
+
+
+def test_extract_no_cards_skips_annotation(sessions: SessionStore, kstore: KnowledgeStore) -> None:
+    llm = AnnotateLLM([])
+    llm.extract_cards = StubLLM([]).extract_cards  # type: ignore[method-assign]
+    assert _service(sessions, kstore, llm).extract_for_session("s1") == []
+    assert llm.calls == []
+
+
+def test_list_filters_by_certainty(sessions: SessionStore, kstore: KnowledgeStore) -> None:
+    _unsure_session(sessions)
+    service = _service(sessions, kstore)
+    service.extract_for_session("s1")
+    service.extract_for_session("s3")
+    unsure = service.list(LEAVER, None, 0.0, "uncertain")
+    sure = service.list(LEAVER, None, 0.0, "certain")
+    assert unsure and all(c.certainty == "uncertain" for c in unsure)
+    assert sure and all(c.certainty == "certain" for c in sure)
+    assert len(unsure) + len(sure) == len(service.list(LEAVER, None, 0.0))
+
+
+def _risk_cards(sessions: SessionStore, kstore: KnowledgeStore) -> CardService:
+    drafts = [
+        CardDraft(type="procedure", title="정산 배치 재실행", body="정산 배치가 실패하면 재실행합니다.",
+                  entities=["정산 배치"], confidence=0.8, evidence_question_ids=["sys-01"]),
+        CardDraft(type="pitfall", title="대행사 타임아웃", body="대행사 응답이 느립니다.",
+                  confidence=0.8, evidence_question_ids=["sys-01"]),
+        CardDraft(type="decision", title="배포 요일", body="금요일 배포는 하지 않습니다.",
+                  confidence=0.8, evidence_question_ids=["sys-01"]),
+    ]
+    sys = InvalidationCondition(event="system_replaced", condition="시스템이 바뀌면 틀립니다.")
+    vendor = InvalidationCondition(event="vendor_changed", condition="업체가 바뀌면 틀립니다.")
+    week = InvalidationCondition(event="schedule_changed", condition="일정이 바뀌면 틀립니다.")
+    llm = AnnotateLLM([[sys, week], [vendor, sys], [week]])
+    llm.extract_cards = StubLLM(drafts).extract_cards  # type: ignore[method-assign]
+    service = _service(sessions, kstore, llm)
+    service.extract_for_session("s1")
+    return service
+
+
+def test_at_risk_filters_by_event(sessions: SessionStore, kstore: KnowledgeStore) -> None:
+    report = _risk_cards(sessions, kstore).at_risk(LEAVER, "system_replaced")
+    assert report.leaver == LEAVER and report.event == "system_replaced"
+    assert report.label == CHANGE_EVENT_LABELS["system_replaced"]
+    assert report.target is None
+    assert [r.card.title for r in report.cards] == ["정산 배치 재실행", "대행사 타임아웃"]
+    assert all([c.event for c in r.conditions] == ["system_replaced"] for r in report.cards)
+    ids = [int(r.card.id[1:]) for r in report.cards]
+    assert ids == sorted(ids)
+
+
+def test_at_risk_filters_by_target(sessions: SessionStore, kstore: KnowledgeStore) -> None:
+    service = _risk_cards(sessions, kstore)
+    by_entity = service.at_risk(LEAVER, "system_replaced", "정산 배치")
+    assert [r.card.title for r in by_entity.cards] == ["정산 배치 재실행"]
+    assert by_entity.target == "정산 배치"
+    by_title = service.at_risk(LEAVER, "schedule_changed", "배포 요일")
+    assert [r.card.title for r in by_title.cards] == ["배포 요일"]
+    by_body = service.at_risk(LEAVER, "vendor_changed", "응답")
+    assert [r.card.title for r in by_body.cards] == ["대행사 타임아웃"]
+    assert service.at_risk(LEAVER, "system_replaced", "없는 대상").cards == []
+    assert service.at_risk(LEAVER, "team_reorganized").cards == []
+    assert service.at_risk("other", "system_replaced").cards == []
+
+
+def test_route_certainty_filter(sessions: SessionStore, kstore: KnowledgeStore) -> None:
+    _unsure_session(sessions)
+    with _client(_service(sessions, kstore)) as c:
+        c.post("/sessions/s1/cards/extract")
+        c.post("/sessions/s3/cards/extract")
+        r = c.get(f"/leavers/{LEAVER}/cards", params={"certainty": "uncertain"})
+        assert r.status_code == 200
+        assert r.json() and all(card["certainty"] == "uncertain" for card in r.json())
+        assert all(card["confidence"] <= UNCERTAIN_CONFIDENCE_MAX for card in r.json())
+        assert c.get(f"/leavers/{LEAVER}/cards", params={"certainty": "maybe"}).status_code == 422
+
+
+def test_route_at_risk(sessions: SessionStore, kstore: KnowledgeStore) -> None:
+    with _client(_risk_cards(sessions, kstore)) as c:
+        r = c.get(f"/leavers/{LEAVER}/cards/at-risk",
+                  params={"event": "system_replaced", "target": "정산 배치"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["event"] == "system_replaced" and body["target"] == "정산 배치"
+        assert body["label"] == CHANGE_EVENT_LABELS["system_replaced"]
+        assert [x["card"]["title"] for x in body["cards"]] == ["정산 배치 재실행"]
+        assert body["cards"][0]["conditions"] == [
+            {"event": "system_replaced", "condition": "시스템이 바뀌면 틀립니다."}
+        ]
+        r = c.get(f"/leavers/{LEAVER}/cards/at-risk", params={"event": "vendor_changed"})
+        assert r.status_code == 200 and r.json()["target"] is None
+        assert [x["card"]["title"] for x in r.json()["cards"]] == ["대행사 타임아웃"]
+
+
+def test_route_at_risk_validation(client: TestClient) -> None:
+    assert client.get(f"/leavers/{LEAVER}/cards/at-risk", params={"event": "weather"}).status_code == 422
+    assert client.get(f"/leavers/{LEAVER}/cards/at-risk").status_code == 422
+    assert client.get("/leavers/BAD!/cards/at-risk",
+                      params={"event": "vendor_changed"}).status_code == 422
