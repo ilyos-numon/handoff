@@ -31,6 +31,7 @@ from handoff.privacy import find_pii
 ARTIFACT_KINDS: tuple[ArtifactKind, ...] = ("runbook", "onboarding_30d", "pitfalls_top10", "adr")
 NO_MORE_ANSWER = "추가로 기억나는 것은 없습니다."
 MAX_LOOP_ANSWERS = 20
+NO_CARDS_DETAIL = "no cards"
 FORBIDDEN_KEYS = ("score", "rank", "grade")
 FLOAT_TARGETS: dict[str, float] = {
     "depth_agree": 0.8,
@@ -50,10 +51,11 @@ TARGET_TEXT = (
 class LoopError(Exception):
     """HTTP or fixture failure; reported as ``LOOP ERROR <step> status=<code>``."""
 
-    def __init__(self, step: str, status: int) -> None:
+    def __init__(self, step: str, status: int, detail: Any = None) -> None:
         super().__init__(f"LOOP ERROR {step} status={status}")
         self.step = step
         self.status = status
+        self.detail = detail
 
 
 # ---- fixture ------------------------------------------------------------------
@@ -162,6 +164,7 @@ class ArtifactRow(BaseModel):
     kind: ArtifactKind
     sections: int
     cited: int
+    generated: bool = True  # False: server answered 409 "no cards" (spec-normal)
 
 
 class DrillRow(BaseModel):
@@ -196,7 +199,11 @@ def _call(client: httpx.Client, step: str, method: str, url: str, **kwargs: Any)
     except httpx.HTTPError:
         raise LoopError(step, 0) from None
     if resp.status_code >= 400:
-        raise LoopError(step, resp.status_code)
+        try:
+            detail = resp.json().get("detail")
+        except (ValueError, AttributeError):
+            detail = None
+        raise LoopError(step, resp.status_code, detail)
     try:
         return resp.json()
     except ValueError:
@@ -398,7 +405,13 @@ def run_loop_eval(
     artifacts: dict[str, Any] = {}
     artifact_rows: list[ArtifactRow] = []
     for kind in ARTIFACT_KINDS:
-        art = _call(client, f"artifact_{kind}", "POST", f"/leavers/{leaver}/artifacts/{kind}")
+        try:
+            art = _call(client, f"artifact_{kind}", "POST", f"/leavers/{leaver}/artifacts/{kind}")
+        except LoopError as exc:
+            if exc.status != 409 or exc.detail != NO_CARDS_DETAIL:
+                raise
+            artifact_rows.append(ArtifactRow(kind=kind, sections=0, cited=0, generated=False))
+            continue
         artifacts[kind] = art
         artifact_rows.append(judge_artifact(kind, art, card_ids))
     # (6) drill
@@ -524,8 +537,13 @@ def render_markdown(result: LoopResult) -> str:
     lines += [
         f"| {_cell(r.question)} | {r.queue_item_id or '-'} | {_mark(r.closed)} |" for r in result.loop
     ]
-    lines += ["", "## 산출물", "", "| 종류 | 절 | 근거 맞음 |", "|------|----|----------|"]
-    lines += [f"| {a.kind} | {a.sections} | {a.cited} |" for a in result.artifacts]
+    lines += ["", "## 산출물", "", "| 종류 | 절 | 근거 맞음 | 비고 |",
+              "|------|----|----------|------|"]
+    lines += [
+        f"| {a.kind} | {a.sections} | {a.cited} | - |" if a.generated
+        else f"| {a.kind} | - | - | 생성 불가({NO_CARDS_DETAIL}) |"
+        for a in result.artifacts
+    ]
     lines += ["", "## 훈련", "", "| 답 | 기대 요점 | 다룸 | 빠짐 | 규칙 지킴 |",
               "|----|----------|------|------|----------|"]
     lines += [

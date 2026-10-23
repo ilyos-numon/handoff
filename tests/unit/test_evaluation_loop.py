@@ -59,6 +59,7 @@ class FakeServer:
             for i, e in enumerate(fixture.expected_cards, start=1)
         ]
         self.fail: dict[str, int] = {}
+        self.no_cards_kinds: set[str] = set()
         self.wrong_judge = 0          # first N judge calls return all "missing"
         self.follow_slot_override: str | None = None
         self.no_fill = False
@@ -150,6 +151,8 @@ class FakeServer:
             return self._json(200, {"found": False, "answer": "", "citations": []})
         if method == "POST" and path.startswith("/leavers/eval/artifacts/"):
             kind = path.rsplit("/", 1)[1]
+            if kind in self.no_cards_kinds:
+                return self._json(409, {"detail": "no cards"})
             sections = [{"heading": "절", "body": "본문", "card_ids": ["c1", "c2"]}]
             if self.bad_section:
                 sections.append({"heading": "절2", "body": "본문", "card_ids": ["c999"]})
@@ -382,6 +385,35 @@ def test_artifact_cited_counts_sections_with_real_cards(
     assert data is not None and data["metrics"]["artifact_cited"] == 0.5
     row = judge_artifact("adr", {"sections": [{"card_ids": []}, {"card_ids": ["c1"]}]}, {"c1"})
     assert (row.sections, row.cited) == (2, 1)
+
+
+def test_artifact_no_cards_is_reported_not_error(
+    fixture: LoopFixture, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    server = FakeServer(fixture)
+    server.no_cards_kinds = {"adr"}
+    server.bad_section = True
+    code, lines, data = _run(server, tmp_path, capsys)
+    assert code == 0
+    assert LOOP_RE.match(lines[-1]), lines[-1]
+    assert data is not None
+    rows = {a["kind"]: a for a in data["artifacts"]}
+    assert rows["adr"]["generated"] is False and rows["adr"]["sections"] == 0
+    assert all(rows[k]["generated"] for k in ("runbook", "onboarding_30d", "pitfalls_top10"))
+    # 3 generated artifacts x (1 real + 1 fake section) -> 3/6
+    assert data["metrics"]["artifact_cited"] == 0.5
+    md = (tmp_path / "run.md").read_text(encoding="utf-8")
+    assert "| adr | - | - | 생성 불가(no cards) |" in md
+
+
+def test_artifact_no_cards_with_require_targets_still_meets_artifact_target(
+    fixture: LoopFixture, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    server = FakeServer(fixture)
+    server.no_cards_kinds = {"adr"}
+    code, _, data = _run(server, tmp_path, capsys, "--require-targets")
+    assert code == 0
+    assert data is not None and data["metrics"]["artifact_cited"] == 1.0
 
 
 def test_judge_drill_rules() -> None:
