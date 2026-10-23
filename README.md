@@ -61,6 +61,7 @@ uv sync
 | `HANDOFF_DEPTH_MAX_FOLLOWUPS` | `1` | 주제당 빈 슬롯 꼬리 질문 상한 (정수 ≥ 0) |
 | `HANDOFF_QUEUE_PER_SESSION` | `2` | 세션마다 질문 큐에서 먼저 출제할 항목 수 (정수 ≥ 0) |
 | `HANDOFF_VERIFY_CLAIMS` | `on` | 지식베이스 답의 주장 단위 검증. `on` 또는 `off` 만 허용, 그 밖의 값이면 시작 시 오류 |
+| `HANDOFF_TACIT_FOLLOWUPS` | `on` | 암묵지 신호어("그냥"·"감으로"·"보통"·"경험상"·"느낌")가 든 답에 판단 기준을 묻는 꼬리 질문을 먼저 냄. 상한은 `HANDOFF_DEPTH_MAX_FOLLOWUPS` 와 공유. `on` 또는 `off` 만 허용 |
 
 qwen 채팅 요청은 `enable_thinking=false` 로 보낸다 (추론 모드를 끄고 응답 시간을 줄인다).
 
@@ -154,6 +155,56 @@ curl -s -X POST http://localhost:8780/kb/ask \
 curl -s -X POST http://localhost:8780/leavers/default/artifacts/runbook
 ```
 
+### 지식 정직성 API
+지식베이스가 "아는 것"만이 아니라 "모르는 것·불확실한 것·언젠가 틀려질 것"도 드러내게 하는 기능 6개다. 불확실·암묵지 감지는 단서어 규칙(결정적)이고, LLM 은 문장 만들기와 후보 고르기만 한다. 이유·위험·역할·징후·대응은 모두 기존 카드나 답변 문장에서만 나오며, 근거가 없으면 지어내지 않고 퇴사자 큐로 넘긴다.
+
+| 기능 | 메서드 경로 | 무엇을, 왜 |
+|------|-------------|-----------|
+| 체스터턴의 울타리 | `POST /kb/fence` | "이건 왜 이렇게 돼 있나, 없애면 뭐가 깨지나"에 결정·함정 카드로 이유와 위험을 답한다. 이유를 모르는 규칙을 후임이 함부로 걷어내지 않게 하려는 것. 문장마다 주장 검증을 거치고, 남는 이유가 없으면 `found=false` 와 함께 퇴사자에게 질문을 넘긴다 |
+| 사전 부검 | `POST /leavers/{leaver}/premortem/questions?role=` · `POST /leavers/{leaver}/artifacts/premortem` | "떠나고 3개월 뒤 먼저 터질 일·징후·대응" 질문 3개를 큐에 넣고, 답이 쌓이면 함정 카드 Top5 를 징후·대응과 함께 산출물로 만든다. 사고가 나기 전에 실패 시나리오를 끌어내기 위해서다 |
+| 무지의 지도 | `GET /leavers/{leaver}/cards?certainty=` · `GET·POST /leavers/{leaver}/gaps[/refresh]` 의 `unknown_areas` | "아마·모르겠·전임자가" 같은 단서가 든 카드를 `uncertain` 으로 표시하고, 아무도 확실히 모르는 영역을 빈 구멍 리포트에 따로 모은다. 확실하지 않은 지식이 확실한 것처럼 전달되지 않게 한다 |
+| 지식 유통기한 | `GET /leavers/{leaver}/cards/at-risk?event=&target=` | 카드마다 "어떤 변화가 생기면 틀려지는지"(시스템 교체·업체 변경·조직 변경·정책 변경·일정 변경 5종)를 붙이고, 이벤트로 위험해지는 카드를 조회한다. 지식은 시간이 지나면 낡는다 |
+| 질문 라우팅 | `POST /kb/ask` 의 `route`·`certainty` | 답이 없을 때 "누구(역할)에게 물어야 하는지"를 연락처 카드·관계자 답변 안의 역할 구간에서만 고른다. 맞는 근거가 없으면 `route=null` (추측하지 않음). 사람 이름은 다루지 않는다 |
+| 암묵지 신호 | `POST /depth/tacit` (세션 중에는 자동) | "그냥·감으로·보통·경험상·느낌" 같은 말이 나오면 그 판단의 기준·신호를 묻는 꼬리 질문을 만든다. 말로 설명하지 않던 판단 기준을 끌어내기 위해서다 |
+
+울타리 질문 (`found=false` 면 `queued` 에 퇴사자에게 넘어간 큐 항목이 온다):
+```bash
+curl -s -X POST http://localhost:8780/kb/fence \
+  -H 'content-type: application/json' \
+  -d '{"leaver":"default","subject":"금요일 배포 금지"}'
+```
+
+사전 부검 질문 3개를 큐에 넣기 / 사전 부검 산출물 (카드가 없으면 409 `no cards`):
+```bash
+curl -s -X POST 'http://localhost:8780/leavers/default/premortem/questions?role=backend_developer'
+curl -s -X POST http://localhost:8780/leavers/default/artifacts/premortem
+```
+
+불확실한 카드만 / 무지의 지도(`unknown_areas`):
+```bash
+curl -s 'http://localhost:8780/leavers/default/cards?certainty=uncertain'
+curl -s -X POST 'http://localhost:8780/leavers/default/gaps/refresh?role=backend_developer'
+```
+
+외부 업체가 바뀌면 틀려질 수 있는 카드 (`event` 는 `system_replaced`·`vendor_changed`·`team_reorganized`·`policy_changed`·`schedule_changed`, 없거나 그 밖이면 422):
+```bash
+curl -s 'http://localhost:8780/leavers/default/cards/at-risk?event=vendor_changed'
+```
+
+답이 없을 때 물어볼 역할 (`answer.found` 가 false 면 `route.ask_role` 과 근거 카드·답변 id):
+```bash
+curl -s -X POST http://localhost:8780/kb/ask \
+  -H 'content-type: application/json' \
+  -d '{"question":"결제 대행사 정산 파일이 늦게 오면 누구에게 물어보나요?","leaver":"default"}'
+```
+
+암묵지 신호 꼬리 질문 (신호어가 없으면 `cues` 빈 목록, `text` null):
+```bash
+curl -s -X POST http://localhost:8780/depth/tacit \
+  -H 'content-type: application/json' \
+  -d '{"question":"배포 시점은 어떻게 정하나요?","answer":"보통 트래픽 보고 감으로 정합니다."}'
+```
+
 ### 실제 공급자 점검 (live_check)
 ```bash
 uv run --env-file .env python -m handoff.live_check
@@ -165,6 +216,12 @@ uv run --env-file .env python -m handoff.live_check
 HANDOFF_PROVIDER=qwen uv run --env-file .env python -m handoff.live_check_loop
 ```
 실측 출력: `LIVE LOOP OK entities=5 questions=3 depth=ok slot_q=ok cards=4 contradictions=0 verify_guard=ok artifact=ok drill=ok review=ok latency_ms=7301`
+
+지식 정직성용 LLM 메서드는 `handoff.live_check_honesty` 로 확인한다 (qwen 이 아니면 `LIVE SKIP`):
+```bash
+HANDOFF_PROVIDER=qwen uv run --env-file .env python -m handoff.live_check_honesty
+```
+실측 출력: `LIVE HONESTY OK fence=1 expiry=5 route=물류운영팀 리드 tacit=ok premortem=1 latency_ms=3186`
 
 ### 품질 평가
 가상 퇴사자 고정 데이터(`eval/fixtures/`)로 10세션을 진행한 뒤 후임 질문 20개를 던지고 규칙(기대 주제 + 키워드)으로 판정한다. 평가용 서버는 비어 있는 데이터 디렉토리로 따로 띄우는 것이 안전하다 (같은 퇴사자로 10회를 넘기면 409).
@@ -210,6 +267,47 @@ uv run python -m handoff.evaluation_loop --base-url http://localhost:8780 --out-
 - 지어낸 답 0 은 1회차·2회차 모두 달성했다 (주장 단위 검증 + 질문 상황 일치 판정).
 - 두 회차에서 각각 다른 지표 1개가 미달했다: 1회차는 card_evidence 0.889, 2회차는 loop_closed 1/2 (대행사 장애 연락 질문이 닫히지 않음). 2회차 보정은 카드 쪽만 고쳤는데 1회차에 통과했던 loop_closed 가 떨어졌다. qwen 응답이 실행마다 달라지는 탓으로 보며, 전 지표 동시 충족은 아직 못 했다. 보정 상한(2회)에 도달해 여기서 멈췄다.
 - 대가: 검증이 보수적이라 답변 있음이 MVP 16/20 에서 12/20 으로 줄었고(q09·q13 놓침), 최장 세션이 6초에서 28초로 늘었다 (답마다 슬롯 판정·꼬리 질문 LLM 호출이 더해짐).
+
+### 평가 N회 집계
+위 결과처럼 qwen 은 같은 입력에도 실행마다 답이 달라진다 (LLM 비결정성). 한 번 잰 수치는 운이 좋았거나 나빴던 한 표본일 뿐이라, `handoff.evaluation_repeat` 로 같은 평가를 N회(1~10) 돌려 평균·최소·최대·목표 충족 회차를 낸다. 회차마다 빈 임시 데이터 디렉토리로 서버를 새로 띄운다 (지식베이스가 퇴사자로 걸러지지 않아 같은 서버를 쓰면 이전 회차 답변이 다음 회차 근거에 섞인다). 서버는 도구가 직접 띄우므로 따로 실행하지 않는다.
+
+정직성 평가(`handoff.evaluation_honesty`, 고정 데이터 `eval/fixtures/honesty_eval.yaml`, 규칙 판정)는 단독으로도 돌릴 수 있다 (`--base-url`, `--require-targets`, 마지막 줄 `HONESTY ...`). 아래는 기존 평가·루프 평가·정직성 평가 3종을 3회 묶어 재는 명령이다.
+```bash
+HANDOFF_PROVIDER=qwen uv run --env-file .env python -m handoff.evaluation_repeat --runs 3 --out-dir docs/eval --name honesty-qwen --require-mean-targets honesty,base.fabricated
+```
+- 출력: `docs/eval/<name>.md`(지표 표 `| 지표 | 목표 | 평균 | 최소 | 최대 | 충족 회차 |` + 회차별 표 + 오류) · `<name>.json`. 마지막 줄 `REPEAT runs=<N> ok=<오류 없는 회차> all_met=<모든 목표 충족 회차>/<ok> unmet_mean=<평균 미달 지표 또는 ->`.
+- 해석: 판정은 평균 기준이다. 다만 지어낸 답은 최댓값이 0 이어야 한다 (한 회차라도 지어내면 실패). 최소·최대 폭이 크면 그 지표는 비결정성에 흔들리는 것이고, "충족 회차 2/3" 은 평균이 미달이어도 어떤 회차에서는 목표를 넘었다는 뜻이다.
+- 종료코드: 모든 회차 오류 2, `--require-mean-targets` 접두어(쉼표 목록)에 걸리는 지표 중 평균 미달이 있으면 1, 그 외 0. 회차 오류는 기록하고 다음 회차를 계속한다. `--suites base,loop,honesty` 로 묶음을 고를 수 있다 (`loop` 는 `base` 와 함께).
+
+결과 (qwen3.7-flash + text-embedding-v4, 3회, 회차당 약 10분). 종료코드 1 — 정직성 지표 3개가 평균 미달이다. 상세: [docs/eval/honesty-qwen.md](docs/eval/honesty-qwen.md)
+
+| 지표 | 목표 | 평균 | 최소 | 최대 | 충족 회차 |
+|------|------|------|------|------|----------|
+| base.fabricated (지어낸 답) | ≤ 0 | 0 | 0 | 0 | 3/3 |
+| base.cited_ok | ≥ 0.857 | 0.953 | 0.929 | 1 | 3/3 |
+| base.answered (참고) | - | 0.667 | 0.65 | 0.7 | - |
+| base.max_session_seconds (참고) | - | 37.333 | 35 | 39 | - |
+| honesty.fence_accuracy | ≥ 0.8 | **0.733 ×** | 0.6 | 0.8 | 2/3 |
+| honesty.fence_fabricated | ≤ 0 | 0 | 0 | 0 | 3/3 |
+| honesty.uncertain_detect | ≥ 0.8 | **0.778 ×** | 0.667 | 0.833 | 2/3 |
+| honesty.tacit_followup | ≥ 0.8 | 1 | 1 | 1 | 3/3 |
+| honesty.routing | ≥ 0.75 | **0.667 ×** | 0.5 | 0.75 | 2/3 |
+| honesty.at_risk | ≥ 0.7 | 0.889 | 0.833 | 1 | 3/3 |
+| honesty.premortem_cited | ≥ 1 | 1 | 1 | 1 | 3/3 |
+| honesty.pii_leaks | ≤ 0 | 0 | 0 | 0 | 3/3 |
+| honesty.surveillance_keys | ≤ 0 | 0 | 0 | 0 | 3/3 |
+| loop.card_evidence (보고만) | ≥ 0.9 | 0.963 | 0.889 | 1 | 2/3 |
+| loop.loop_closed (보고만) | ≥ 1 | 0.5 × | 0.5 | 0.5 | 0/3 |
+
+그 밖의 루프 지표(depth_agree·slot_target·slot_fill·card_recall·gap_recall·artifact_cited·drill_ok·pii_leaks)는 3회 모두 목표를 충족했다. 모든 목표를 동시에 충족한 회차는 0/3 이다.
+
+- 지어낸 답은 3회 모두 0 이다 (기존 평가 `base.fabricated`, 울타리 `fence_fabricated` 둘 다). 근거가 없는 울타리 질문에 이유를 만들어 낸 적은 없다.
+- 평균 미달 3개(fence_accuracy 0.733, routing 0.667, uncertain_detect 0.778)는 진단만 하고 고치지 못했다. 원인은 이번 보정 범위 밖이다.
+  - 울타리: 검증 단계(`answers_question` 판정)가 이유만 담은 문장을 "질문에 대한 답이 아님"으로 거르는 쪽으로 보수적이다. 그래서 있는 이유도 버려 `found=false` 가 된다. 검증 프롬프트는 기존 지식베이스 답과 공유해 이번에 바꾸지 않았다.
+  - 라우팅: 고정 데이터가 기대하는 연락처가 질문과 주제가 다른 경우가 있고, qwen 은 그때 추측하지 않고 `route=null` 을 낸다. 실패라기보다 고정 데이터 기대값을 다시 검토해야 할 수 있다.
+  - 불확실 감지: 카드 추출이 "아마·모르겠" 같은 불확실 문장을 카드에 담지 않고 빠뜨린다. 감지 규칙은 결정적이라, 카드에 문장이 없으면 잡을 수 없다. 카드 추출 프롬프트는 2차 지표를 지키려고 건드리지 않았다.
+- 테스트·목표값·고정 데이터는 완화하지 않았다. 범위 안 보정 1회는 효과가 없어 되돌렸다.
+- 대가: 최장 세션이 2차 28초에서 35~39초로 늘었다 (세션 종료 때 유통기한 LLM 호출 1회가 더해진 영향으로 본다). 답변 있음은 0.65~0.7 (13~14/20).
 
 ### 테스트
 단위 테스트:
