@@ -180,6 +180,9 @@ class SessionStore:
             rows = self._conn.execute(sql, (leaver, role)).fetchall()
         return [_entry_from(r) for r in rows]
 
+    def shared(self) -> tuple[sqlite3.Connection, threading.Lock]:
+        return self._conn, self._lock
+
     def close(self) -> None:
         with self._lock:
             self._conn.close()
