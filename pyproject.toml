@@ -13,7 +13,11 @@ dependencies = [
     "httpx>=0.27",
     "itsdangerous>=2.2.0",
     "casbin>=1.43.0",
+    "slowapi>=0.1.10",
 ]
+
+[project.scripts]
+handoff-demo = "handoff.demo.launch:main"
 
 [dependency-groups]
 dev = [
@@ -44,5 +48,5 @@ python_version = "3.12"
 disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["qdrant_client.*", "casbin.*"]
+module = ["qdrant_client.*", "casbin.*", "slowapi.*"]
 ignore_missing_imports = true
