@@ -6,10 +6,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-SUPPORTED_PROVIDERS = frozenset({"fake", "qwen"})
+SUPPORTED_PROVIDERS = frozenset({"fake", "qwen", "replay", "record"})
 DEFAULT_LLM_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+DEFAULT_CASSETTE: Path = Path(__file__).parent / "demo" / "cassette.json"
 
-_DEFAULT_MIN_SCORE = {"fake": 0.25, "qwen": 0.40}
+_DEFAULT_MIN_SCORE = {"fake": 0.25, "qwen": 0.40, "replay": 0.25, "record": 0.25}
+_FAKE_EMBED_PROVIDERS = frozenset({"fake", "replay", "record"})
 
 
 @dataclass(frozen=True)
@@ -34,6 +36,15 @@ class Settings:
     auth: bool = False
     auth_secret: str = field(default="", repr=False)
     invite_ttl_hours: int = 72
+    demo: bool = False
+    demo_ttl_hours: int = 24
+    demo_max_sandboxes: int = 200
+    demo_llm_daily_cap: int = 300
+    demo_max_body_bytes: int = 8192
+    demo_rate: str = "120/minute"
+    demo_start_rate: str = "10/hour"
+    demo_cassette: Path = DEFAULT_CASSETTE
+    public_url: str = ""
 
 
 def _float(source: Mapping[str, str], name: str, default: float) -> float:
@@ -73,12 +84,16 @@ def _on_off(source: Mapping[str, str], name: str, default: bool) -> bool:
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     """Load settings from ``env`` (defaults to ``os.environ``)."""
     source: Mapping[str, str] = os.environ if env is None else env
-    provider = source.get("HANDOFF_PROVIDER", "fake")
+    demo = _on_off(source, "HANDOFF_DEMO", False)
+    provider = source.get("HANDOFF_PROVIDER", "replay" if demo else "fake")
     if provider not in SUPPORTED_PROVIDERS:
         raise ValueError(f"unsupported HANDOFF_PROVIDER: {provider}")
     api_key = source.get("HANDOFF_LLM_API_KEY", "")
-    if provider == "qwen" and not api_key.strip():
-        raise ValueError("HANDOFF_LLM_API_KEY is required for HANDOFF_PROVIDER=qwen")
+    if provider in ("qwen", "record") and not api_key.strip():
+        raise ValueError(f"HANDOFF_LLM_API_KEY is required for HANDOFF_PROVIDER={provider}")
+    auth = _on_off(source, "HANDOFF_AUTH", True)
+    if demo and not auth:
+        raise ValueError("HANDOFF_DEMO=on requires HANDOFF_AUTH=on")
     return Settings(
         provider=provider,
         data_dir=Path(source.get("HANDOFF_DATA_DIR", "./data")),
@@ -97,15 +112,24 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         queue_per_session=_int(source, "HANDOFF_QUEUE_PER_SESSION", 2, 0),
         verify_claims=_on_off(source, "HANDOFF_VERIFY_CLAIMS", True),
         tacit_followups=_on_off(source, "HANDOFF_TACIT_FOLLOWUPS", True),
-        auth=_on_off(source, "HANDOFF_AUTH", True),
+        auth=auth,
         auth_secret=source.get("HANDOFF_AUTH_SECRET", ""),
         invite_ttl_hours=_int(source, "HANDOFF_INVITE_TTL_HOURS", 72, 1),
+        demo=demo,
+        demo_ttl_hours=_int(source, "HANDOFF_DEMO_TTL_HOURS", 24, 1),
+        demo_max_sandboxes=_int(source, "HANDOFF_DEMO_MAX_SANDBOXES", 200, 1),
+        demo_llm_daily_cap=_int(source, "HANDOFF_DEMO_LLM_DAILY_CAP", 300, 0),
+        demo_max_body_bytes=_int(source, "HANDOFF_DEMO_MAX_BODY_BYTES", 8192, 1024),
+        demo_rate=source.get("HANDOFF_DEMO_RATE", "120/minute"),
+        demo_start_rate=source.get("HANDOFF_DEMO_START_RATE", "10/hour"),
+        demo_cassette=Path(source.get("HANDOFF_DEMO_CASSETTE", str(DEFAULT_CASSETTE))),
+        public_url=source.get("HANDOFF_PUBLIC_URL", "").rstrip("/"),
     )
 
 
 def collection_name(settings: Settings) -> str:
-    """Return the Qdrant collection name; non-fake providers get model/dim suffixes."""
-    if settings.provider == "fake":
+    """Return the Qdrant collection name; real-embedding providers get model/dim suffixes."""
+    if settings.provider in _FAKE_EMBED_PROVIDERS:
         return settings.collection
     model = re.sub(r"[^a-z0-9]+", "_", settings.embed_model.lower()).strip("_")
     return f"{settings.collection}_{model}_{settings.embed_dim}"

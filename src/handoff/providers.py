@@ -257,4 +257,37 @@ def build_providers(settings: Settings) -> tuple[Embedder, LLM]:
             settings.llm_timeout_s,
         )
         return embedder, llm
+    if settings.provider == "replay":
+        from handoff.providers_qwen import QwenLLM
+        from handoff.providers_replay import Cassette, DailyBudget, ReplayLLM
+
+        live = (
+            QwenLLM(
+                settings.llm_base_url,
+                settings.llm_model,
+                settings.llm_api_key,
+                settings.llm_timeout_s,
+            )
+            if settings.llm_api_key.strip()
+            else None
+        )
+        replay = ReplayLLM(
+            Cassette(settings.demo_cassette),
+            settings.llm_model,
+            FakeLLM(),
+            live,
+            DailyBudget(settings.data_dir / "demo_llm_budget.json", settings.demo_llm_daily_cap),
+        )
+        return FakeEmbedder(), replay
+    if settings.provider == "record":
+        from handoff.providers_replay import Cassette, RecordingQwenLLM
+
+        recording = RecordingQwenLLM(
+            Cassette(settings.demo_cassette),
+            settings.llm_base_url,
+            settings.llm_model,
+            settings.llm_api_key,
+            settings.llm_timeout_s,
+        )
+        return FakeEmbedder(), recording
     raise ValueError(f"unsupported HANDOFF_PROVIDER: {settings.provider}")

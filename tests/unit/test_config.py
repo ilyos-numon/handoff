@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from handoff.config import (
+    DEFAULT_CASSETTE,
     DEFAULT_LLM_BASE_URL,
     SUPPORTED_PROVIDERS,
     Settings,
@@ -270,3 +271,96 @@ def test_repr_hides_auth_secret() -> None:
     settings = load_settings({"HANDOFF_AUTH_SECRET": "s3cr3t-value"})
     assert "s3cr3t-value" not in repr(settings)
     assert "s3cr3t-value" not in str(settings)
+
+
+def test_supported_providers_include_replay_and_record() -> None:
+    assert {"fake", "qwen", "replay", "record"} <= SUPPORTED_PROVIDERS
+
+
+def test_demo_setting_defaults() -> None:
+    settings = load_settings({})
+    assert settings.demo is False
+    assert settings.demo_ttl_hours == 24
+    assert settings.demo_max_sandboxes == 200
+    assert settings.demo_llm_daily_cap == 300
+    assert settings.demo_max_body_bytes == 8192
+    assert settings.demo_rate == "120/minute"
+    assert settings.demo_start_rate == "10/hour"
+    assert settings.demo_cassette == DEFAULT_CASSETTE
+    assert DEFAULT_CASSETTE.parts[-2:] == ("demo", "cassette.json")
+    assert settings.public_url == ""
+
+
+def test_demo_setting_overrides() -> None:
+    settings = load_settings(
+        {
+            "HANDOFF_DEMO": "on",
+            "HANDOFF_DEMO_TTL_HOURS": "2",
+            "HANDOFF_DEMO_MAX_SANDBOXES": "5",
+            "HANDOFF_DEMO_LLM_DAILY_CAP": "0",
+            "HANDOFF_DEMO_MAX_BODY_BYTES": "1024",
+            "HANDOFF_DEMO_RATE": "5/second",
+            "HANDOFF_DEMO_START_RATE": "1/minute",
+            "HANDOFF_DEMO_CASSETTE": "/tmp/c.json",
+            "HANDOFF_PUBLIC_URL": "https://example.test/app/",
+        }
+    )
+    assert settings.demo is True
+    assert settings.demo_ttl_hours == 2
+    assert settings.demo_max_sandboxes == 5
+    assert settings.demo_llm_daily_cap == 0
+    assert settings.demo_max_body_bytes == 1024
+    assert settings.demo_rate == "5/second"
+    assert settings.demo_start_rate == "1/minute"
+    assert settings.demo_cassette == Path("/tmp/c.json")
+    assert settings.public_url == "https://example.test/app"
+
+
+def test_demo_defaults_provider_to_replay_without_key() -> None:
+    settings = load_settings({"HANDOFF_DEMO": "on"})
+    assert settings.provider == "replay"
+    assert settings.min_score == 0.25
+    assert collection_name(settings) == settings.collection
+
+
+def test_demo_explicit_provider_wins() -> None:
+    assert load_settings({"HANDOFF_DEMO": "on", "HANDOFF_PROVIDER": "fake"}).provider == "fake"
+
+
+def test_demo_requires_auth() -> None:
+    with pytest.raises(ValueError, match="HANDOFF_DEMO=on requires HANDOFF_AUTH=on"):
+        load_settings({"HANDOFF_DEMO": "on", "HANDOFF_AUTH": "off"})
+
+
+def test_record_without_key_raises() -> None:
+    with pytest.raises(
+        ValueError, match="HANDOFF_LLM_API_KEY is required for HANDOFF_PROVIDER=record"
+    ):
+        load_settings({"HANDOFF_PROVIDER": "record", "HANDOFF_LLM_API_KEY": " "})
+
+
+def test_record_and_replay_collection_unchanged() -> None:
+    for provider in ("replay", "record"):
+        settings = load_settings({"HANDOFF_PROVIDER": provider, "HANDOFF_LLM_API_KEY": QWEN_KEY})
+        assert collection_name(settings) == "handoff_kb"
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("HANDOFF_DEMO_TTL_HOURS", "0"),
+        ("HANDOFF_DEMO_MAX_SANDBOXES", "0"),
+        ("HANDOFF_DEMO_LLM_DAILY_CAP", "-1"),
+        ("HANDOFF_DEMO_MAX_BODY_BYTES", "1023"),
+        ("HANDOFF_DEMO_TTL_HOURS", "x"),
+    ],
+)
+def test_demo_integer_minimums_name_variable(name: str, value: str) -> None:
+    with pytest.raises(ValueError, match=name):
+        load_settings({name: value})
+
+
+@pytest.mark.parametrize("value", ["yes", "ON", ""])
+def test_demo_rejects_non_on_off(value: str) -> None:
+    with pytest.raises(ValueError, match="HANDOFF_DEMO must be on or off"):
+        load_settings({"HANDOFF_DEMO": value})
