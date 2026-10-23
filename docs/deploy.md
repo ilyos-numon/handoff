@@ -1,6 +1,6 @@
 # 공개 데모 배포 (Hugging Face Spaces)
 
-배포 상태: 배포 대기
+배포 상태: 배포 대기 (업로드 완료: huggingface.co/spaces/fdasfdsdasfasdf/handoff, 실행 불가: 계정 cpu-basic 할당량 0)
 
 로컬에서는 `make demo` 한 줄이면 된다. 이 문서는 누구나 브라우저로 열 수 있는 공개 데모를 Hugging Face Spaces(Docker)에 올리는 방법이다.
 
