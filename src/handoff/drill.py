@@ -1,4 +1,4 @@
-"""Incident drill service: scenarios from cards and self-check feedback (no scores)."""
+"""Incident drill service: scenarios from cards and self-check feedback (feedback only, no grading)."""
 
 from __future__ import annotations
 
