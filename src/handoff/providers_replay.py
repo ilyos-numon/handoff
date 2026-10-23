@@ -44,7 +44,9 @@ if TYPE_CHECKING:
 
 CASSETTE_VERSION = 1
 
-_ID_PATTERN = re.compile(r"\b[0-9a-f]{32}\b|\bc\d+\b")
+# ASCII-only word boundaries: Python's \b treats Hangul as word characters, so "c12의"
+# would not match. Ids glued to Korean particles must still be normalized.
+_ID_PATTERN = re.compile(r"(?<![0-9A-Za-z_])(?:[0-9a-f]{32}|c\d+)(?![0-9A-Za-z_])")
 _PLACEHOLDER = re.compile(r"⟨[cs]\d+⟩")
 
 

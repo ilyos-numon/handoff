@@ -109,6 +109,23 @@ def test_denormalize_session_id_and_unknown_placeholder_kept() -> None:
     assert denormalize("⟨s1⟩ / ⟨c4⟩", ids) == f"{SID_B} / ⟨c4⟩"
 
 
+def test_normalize_ids_followed_by_korean_particles() -> None:
+    ids: dict[str, str] = {}
+    out = normalize(f"c12의 근거와 c45는 세션 {SID_A}에서 나왔다", ids)
+    assert out == "⟨c1⟩의 근거와 ⟨c2⟩는 세션 ⟨s1⟩에서 나왔다"
+    assert denormalize(out, ids) == f"c12의 근거와 c45는 세션 {SID_A}에서 나왔다"
+    other: dict[str, str] = {}
+    assert normalize(f"c3의 근거와 c8는 세션 {SID_B}에서 나왔다", other) == out
+    assert denormalize(out, other) == f"c3의 근거와 c8는 세션 {SID_B}에서 나왔다"
+
+
+def test_normalize_leaves_ids_inside_ascii_words() -> None:
+    ids: dict[str, str] = {}
+    text = f"abc12 c3x c4_ x{SID_A} {SID_A}z"
+    assert normalize(text, ids) == text
+    assert ids == {}
+
+
 # --- cassette ---
 
 

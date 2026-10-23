@@ -198,6 +198,27 @@ def test_start_rate_limit_is_429(tmp_path: Path) -> None:
         assert c.get("/demo/status").status_code == 200  # other paths keep the default limit
 
 
+def _xff(value: str) -> dict[str, str]:
+    return {"X-Forwarded-For": value}
+
+
+def test_rate_limit_keys_on_forwarded_client_behind_proxy(tmp_path: Path) -> None:
+    with TestClient(create_app(_settings(tmp_path, demo_rate="2/minute"))) as c:
+        alice = [c.get("/demo/status", headers=_xff("alice.example")).status_code for _ in range(3)]
+        assert alice == [200, 200, 429]
+        # A different client behind the same proxy has its own bucket.
+        assert c.get("/demo/status", headers=_xff("bob.example")).status_code == 200
+
+
+def test_rate_limit_ignores_spoofed_left_forwarded_values(tmp_path: Path) -> None:
+    with TestClient(create_app(_settings(tmp_path, demo_rate="2/minute"))) as c:
+        codes = [
+            c.get("/demo/status", headers=_xff(f"spoof-{i}.example, alice.example")).status_code
+            for i in range(3)
+        ]
+        assert codes == [200, 200, 429]
+
+
 def test_no_rate_limit_when_demo_off(tmp_path: Path) -> None:
     app = create_app(_settings(tmp_path, demo=False, demo_rate="1/minute"))
     assert not any(m.cls is DemoBodyGuard for m in app.user_middleware)

@@ -29,6 +29,21 @@ START_SCOPE = "demo-start"
 _UPLOAD_PATH = re.compile(r"^/leavers/[^/]+/sources$")
 
 Gate = Callable[[Request], Any]
+FORWARDED_FOR = "x-forwarded-for"
+
+
+def client_key(request: Request) -> str:
+    """Rate-limit key: the right-most X-Forwarded-For value, else the remote address.
+
+    Behind a reverse proxy (e.g. Hugging Face Spaces) every request shares the proxy's
+    remote address. The proxy appends the real client to the right of X-Forwarded-For;
+    values on the left come from the client and can be forged, so they are ignored.
+    """
+    forwarded = request.headers.get(FORWARDED_FOR, "")
+    hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
+    if hops:
+        return hops[-1]
+    return get_remote_address(request)
 
 
 @dataclass(frozen=True)
@@ -126,7 +141,7 @@ class DemoBodyGuard:
 
 def install_demo_guard(app: FastAPI, settings_like: DemoGuardConfig) -> None:
     """Add the demo guards. Call before SessionMiddleware is added so the session stays outermost."""
-    limiter = Limiter(key_func=get_remote_address, default_limits=[settings_like.rate])
+    limiter = Limiter(key_func=client_key, default_limits=[settings_like.rate])
 
     # Per-path counters, like slowapi's default limits (key style "url").
     @limiter.limit(settings_like.rate)
