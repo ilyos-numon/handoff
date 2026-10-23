@@ -11,11 +11,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from handoff.config import Settings
+from handoff.fence import FenceService
 from handoff.kb import KnowledgeBase
 from handoff.knowledge_app import KnowledgeServices, build_knowledge, include_knowledge_routers
+from handoff.premortem import PremortemService
 from handoff.providers import FakeEmbedder, FakeLLM
 from handoff.question_tree import load_tree
 from handoff.routes import Services, router
+from handoff.routing import QuestionRouter
 from handoff.session import SessionService
 from handoff.store import SessionStore
 from handoff.verify import ClaimVerifier
@@ -138,8 +141,38 @@ def test_include_knowledge_routers_registers_feature_paths() -> None:
         "/leavers/{leaver}/drills",
         "/drills/{drill_id}",
         "/drills/{drill_id}/answers",
+        "/kb/fence",
+        "/depth/tacit",
+        "/leavers/{leaver}/cards/at-risk",
+        "/leavers/{leaver}/premortem/questions",
     }
     assert expected <= paths
+
+
+def test_build_knowledge_wires_honesty_services(tmp_path: Path) -> None:
+    store = SessionStore(":memory:")
+    try:
+        on = build_knowledge(_settings(tmp_path), FakeLLM(), store)
+        off = build_knowledge(_settings(tmp_path, tacit_followups=False), FakeLLM(), store)
+        assert isinstance(on.fence, FenceService)
+        assert isinstance(on.router, QuestionRouter)
+        assert isinstance(on.premortem, PremortemService)
+        assert on.successor._router is on.router
+        assert on.depth._tacit_followups is True
+        assert off.depth._tacit_followups is False
+    finally:
+        store.close()
+
+
+def test_fence_and_premortem_routes_respond(
+    loop_app: tuple[TestClient, KnowledgeServices],
+) -> None:
+    client, _ = loop_app
+    fence = client.post("/kb/fence", json={"leaver": "demo", "subject": "금요일 배포 금지"})
+    assert fence.status_code == 200, fence.text
+    premortem = client.post("/leavers/demo/premortem/questions")
+    assert premortem.status_code == 200, premortem.text
+    assert len(premortem.json()) == 3
 
 
 def test_mock_sources_route_works(loop_app: tuple[TestClient, KnowledgeServices]) -> None:

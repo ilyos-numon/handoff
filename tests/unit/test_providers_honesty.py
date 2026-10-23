@@ -43,18 +43,52 @@ def test_fake_and_qwen_satisfy_protocol() -> None:
             assert callable(getattr(llm, name))
 
 
-FAKE_CALLS: list[tuple[str, Callable[[FakeLLM], Any]]] = [
-    ("tacit", lambda llm: llm.tacit_follow_up("질문", "그냥 합니다", ["그냥"])),
-    ("expiry", lambda llm: llm.annotate_invalidation([NEW_CARD])),
-    ("routing", lambda llm: llm.route_question("누구에게?", [CANDIDATE])),
-    ("fence", lambda llm: llm.explain_fence("배치 서버", [CARD])),
+FAKE_CALLS: list[tuple[Any, str, tuple[Any, ...], Callable[[FakeLLM], Any]]] = [
+    (
+        tacit,
+        "fake_tacit_follow_up",
+        ("질문", "그냥 합니다", ["그냥"]),
+        lambda llm: llm.tacit_follow_up("질문", "그냥 합니다", ["그냥"]),
+    ),
+    (
+        expiry,
+        "fake_annotate_invalidation",
+        ([NEW_CARD],),
+        lambda llm: llm.annotate_invalidation([NEW_CARD]),
+    ),
+    (
+        routing,
+        "fake_route_question",
+        ("누구에게?", [CANDIDATE]),
+        lambda llm: llm.route_question("누구에게?", [CANDIDATE]),
+    ),
+    (
+        fence,
+        "fake_explain_fence",
+        ("배치 서버", [CARD]),
+        lambda llm: llm.explain_fence("배치 서버", [CARD]),
+    ),
 ]
 
 
-@pytest.mark.parametrize(("module", "call"), FAKE_CALLS)
-def test_fake_llm_delegates_to_stub(module: str, call: Callable[[FakeLLM], Any]) -> None:
-    with pytest.raises(NotImplementedError, match=f"^{module}: implemented in stage S"):
-        call(FakeLLM())
+@pytest.mark.parametrize(("module", "fn", "args", "call"), FAKE_CALLS)
+def test_fake_llm_delegates_to_llm_tasks(
+    monkeypatch: pytest.MonkeyPatch,
+    module: Any,
+    fn: str,
+    args: tuple[Any, ...],
+    call: Callable[[FakeLLM], Any],
+) -> None:
+    seen: list[tuple[Any, ...]] = []
+    sentinel = object()
+
+    def recorder(*a: Any) -> object:
+        seen.append(a)
+        return sentinel
+
+    monkeypatch.setattr(module, fn, recorder)
+    assert call(FakeLLM()) is sentinel
+    assert seen == [args]
 
 
 @pytest.mark.parametrize(
@@ -109,18 +143,17 @@ def test_qwen_llm_passes_chat_and_args(
 
 
 @pytest.mark.parametrize(
-    ("call", "stage"),
+    ("module", "fn"),
     [
-        (lambda: tacit.fake_tacit_follow_up("q", "a", ["그냥"]), "S4"),
-        (lambda: tacit.qwen_tacit_follow_up(_qwen()._chat, "q", "a", ["그냥"]), "S4"),
-        (lambda: expiry.fake_annotate_invalidation([NEW_CARD]), "S5"),
-        (lambda: expiry.qwen_annotate_invalidation(_qwen()._chat, [NEW_CARD]), "S5"),
-        (lambda: routing.fake_route_question("q", [CANDIDATE]), "S7"),
-        (lambda: routing.qwen_route_question(_qwen()._chat, "q", [CANDIDATE]), "S7"),
-        (lambda: fence.fake_explain_fence("s", [CARD]), "S8"),
-        (lambda: fence.qwen_explain_fence(_qwen()._chat, "s", [CARD]), "S8"),
+        (tacit, "fake_tacit_follow_up"),
+        (tacit, "qwen_tacit_follow_up"),
+        (expiry, "fake_annotate_invalidation"),
+        (expiry, "qwen_annotate_invalidation"),
+        (routing, "fake_route_question"),
+        (routing, "qwen_route_question"),
+        (fence, "fake_explain_fence"),
+        (fence, "qwen_explain_fence"),
     ],
 )
-def test_stubs_name_owner_stage(call: Callable[[], Any], stage: str) -> None:
-    with pytest.raises(NotImplementedError, match=f"implemented in stage {stage}$"):
-        call()
+def test_llm_task_functions_exist(module: Any, fn: str) -> None:
+    assert callable(getattr(module, fn, None))
