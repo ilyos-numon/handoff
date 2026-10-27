@@ -13,7 +13,9 @@
 ```bash
 uv sync
 make demo        # 웹 화면을 빌드한 뒤 "데모 주소: http://localhost:8780/demo" 가 뜨면 브라우저로 연다
+make try         # 인증을 켠 실제 흐름: 관리자·퇴사자·후임·팀장 창 4개가 따로 열린다 (Ctrl+C 로 종료)
 ```
+`make try` 의 네 창은 역할마다 쿠키가 분리돼 있어서, 링크를 다른 곳에서 열려면 역할마다 다른 브라우저(또는 프로필)를 쓴다. 처음이면 `uv run playwright install chromium` 을 먼저 실행하고, 포트·데이터 폴더는 `make try TRY_ARGS="--port 8781 --data-dir ./data/try"` 처럼 바꾼다.
 `make demo` 는 먼저 `make web` 으로 `web/` 의 화면을 빌드한다. 이미 최신이면 빌드를 건너뛴다.
 `/demo` 를 열면 바로 나만의 연습 공간이 생기고 퇴사자의 첫 세션 답변까지 기록돼 있다(퇴사자 창에는 열린 세션이 없어 `세션 시작` 을 누르면 두 번째 세션이 이어진다). 이어서 할 일은 [시연 시나리오](docs/demo-scenario.md) 11단계부터.
 
@@ -127,6 +129,7 @@ uv run python -m handoff.rbac.cli invite --role manager --leaver default
 - `--role` 은 `leaver`(퇴사자)·`successor`(후임)·`manager`(팀장), `--leaver` 는 `^[a-z0-9_-]{1,40}$`. 다른 주소로 띄웠으면 `--base-url` 을 준다 (기본 `http://localhost:8780`).
 - 출력은 `http://localhost:8780/auth/accept?token=...` 한 줄이다. 72시간(`HANDOFF_INVITE_TTL_HOURS`) 동안 여러 번 쓸 수 있고 개별 폐기는 없다. 전부 무효로 하려면 `auth_secret` 파일을 지우거나 `HANDOFF_AUTH_SECRET` 을 바꾸고 서버를 재시작한다.
 - 지금 역할 확인 `GET /auth/me`, 로그아웃 `POST /auth/logout`.
+- 한 브라우저는 로그인 역할을 하나만 가진다. 링크를 여러 개 열면 마지막에 연 링크의 역할이 남는다.
 - 같은 브라우저 창들은 쿠키를 공유한다. 세 역할을 한 번에 보려면 창 3개를 서로 다른 쿠키 저장소로 연다 (일반 창 / 시크릿 창 / 다른 브라우저).
 - 로그인 쿠키는 localhost 시연용으로 HTTPS 전용 표시 없이 나간다. 실제 운영은 HTTPS 뒤에 두는 것을 전제로 한다.
 - 처음부터 끝까지 따라 하는 3역할 시연 순서는 [docs/demo-scenario.md](docs/demo-scenario.md) 에 있다.
