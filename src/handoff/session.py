@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from handoff.contracts import SessionHooks, is_queue_id, topic_id
 from handoff.coverage import CoverageReport, build_coverage
 from handoff.kb import KBEntry, KnowledgeBase
+from handoff.privacy import scrub_contacts
 from handoff.providers import LLM, ProviderError
 from handoff.question_tree import Axis, QuestionTree, load_tree
 from handoff.store import SessionRow, SessionStore
@@ -248,7 +249,7 @@ class SessionService:
         ingested = self._kb.add(answers, row.leaver)
         summary = self._llm.summarize(answers)
         row.ended_at = self._clock()
-        row.summary = list(summary)
+        row.summary = [scrub_contacts(s) for s in summary]
         self._store.update_session(row)
         if self._hooks is not None:
             try:
@@ -279,7 +280,7 @@ class SessionService:
             remaining_seconds=remaining,
             items_today=today,
             items_total=total,
-            summary=list(row.summary),
+            summary=[scrub_contacts(s) for s in row.summary],
         )
 
     def coverage(self, leaver: str, role: str) -> CoverageReport:
