@@ -22,6 +22,8 @@ __pycache__/
 test-results/
 playwright-report/
 node_modules/
+web/node_modules/
+web/dist/
 *.log
 
 # 이미지에 필요 없는 것 (Dockerfile 은 pyproject.toml·uv.lock·README.md·src/ 만 쓴다)
