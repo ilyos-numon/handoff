@@ -59,10 +59,16 @@ function LeaverRow({ rec, onMissing }: { rec: LeaverRecord; onMissing: () => voi
   const [links, setLinks] = useState<Partial<Record<DemoRole, InviteResponse>>>({});
   const [busy, setBusy] = useState<DemoRole | null>(null);
   const [copied, setCopied] = useState<DemoRole | null>(null);
+  // 같은 브라우저에서 다른 역할 링크를 열면 관리자 쿠키가 바뀌어 401·403 이 난다.
+  const [denied, setDenied] = useState<401 | 403 | null>(null);
   const make = async (role: DemoRole) => {
     setBusy(role);
-    try { const r = await Api.invite(rec.leaver, role); setLinks((l) => ({ ...l, [role]: r })); }
-    catch (e) { if ((e as { status?: number }).status === 404) onMissing(); }
+    try { const r = await Api.invite(rec.leaver, role); setLinks((l) => ({ ...l, [role]: r })); setDenied(null); }
+    catch (e) {
+      const status = (e as { status?: number }).status;
+      if (status === 404) onMissing();
+      else if (status === 401 || status === 403) setDenied(status);
+    }
     finally { setBusy(null); }
   };
   const copy = async (role: DemoRole, url: string) => {
@@ -79,6 +85,8 @@ function LeaverRow({ rec, onMissing }: { rec: LeaverRecord; onMissing: () => voi
           <Button key={r} size="sm" busy={busy === r} onClick={() => make(r)}>{ROLE_LABEL[r]} 링크</Button>
         ))}
       </div>
+      {denied === 403 && <p className="note error small" role="alert">이 브라우저는 지금 다른 역할로 들어와 있습니다. 관리자 링크로 다시 들어와 주세요.</p>}
+      {denied === 401 && <p className="note error small" role="alert">관리자 링크로 다시 들어와 주세요.</p>}
       {INVITE_ROLES.filter((r) => links[r]).map((r) => (
         <div key={r} className="invite fade-in">
           <span className="role-chip" style={{ ["--role-c" as string]: `var(--role-${r})` }}><i />{ROLE_LABEL[r]}</span>
@@ -87,6 +95,7 @@ function LeaverRow({ rec, onMissing }: { rec: LeaverRecord; onMissing: () => voi
           <span className="xs muted">{dateTime(links[r]!.expires_at)}까지</span>
         </div>
       ))}
+      {INVITE_ROLES.some((r) => links[r]) && <p className="note warm small">이 브라우저에서 열면 관리자 로그인이 바뀝니다. 링크는 받을 사람에게 전달해 주세요.</p>}
     </li>
   );
 }
