@@ -92,6 +92,7 @@ def _build_demo_guard(settings: Settings) -> "DemoGuardConfig | None":
         max_body_bytes=settings.demo_max_body_bytes,
         rate=settings.demo_rate,
         start_rate=settings.demo_start_rate,
+        trusted_proxies=settings.trusted_proxies,
     )
 
 

@@ -204,7 +204,9 @@ def _xff(value: str) -> dict[str, str]:
 
 
 def test_rate_limit_keys_on_forwarded_client_behind_proxy(tmp_path: Path) -> None:
-    with TestClient(create_app(_settings(tmp_path, demo_rate="2/minute"))) as c:
+    with TestClient(
+        create_app(_settings(tmp_path, demo_rate="2/minute", trusted_proxies=("testclient",)))
+    ) as c:
         alice = [c.get("/demo/status", headers=_xff("alice.example")).status_code for _ in range(3)]
         assert alice == [200, 200, 429]
         # A different client behind the same proxy has its own bucket.
@@ -212,7 +214,9 @@ def test_rate_limit_keys_on_forwarded_client_behind_proxy(tmp_path: Path) -> Non
 
 
 def test_rate_limit_ignores_spoofed_left_forwarded_values(tmp_path: Path) -> None:
-    with TestClient(create_app(_settings(tmp_path, demo_rate="2/minute"))) as c:
+    with TestClient(
+        create_app(_settings(tmp_path, demo_rate="2/minute", trusted_proxies=("testclient",)))
+    ) as c:
         codes = [
             c.get("/demo/status", headers=_xff(f"spoof-{i}.example, alice.example")).status_code
             for i in range(3)

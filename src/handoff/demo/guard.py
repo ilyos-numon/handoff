@@ -5,6 +5,7 @@ import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
+from ipaddress import ip_address, ip_network
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -21,6 +22,7 @@ __all__ = [
     "DemoBodyGuard",
     "DemoGuardConfig",
     "install_demo_guard",
+    "make_client_key",
 ]
 
 UPLOAD_BLOCKED = "demo upload disabled"
@@ -33,18 +35,46 @@ Gate = Callable[[Request], Any]
 FORWARDED_FOR = "x-forwarded-for"
 
 
-def client_key(request: Request) -> str:
-    """Rate-limit key: the right-most X-Forwarded-For value, else the remote address.
+def _forwarded_client(request: Request) -> str | None:
+    forwarded = request.headers.get(FORWARDED_FOR, "")
+    hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
+    return hops[-1] if hops else None
+
+
+def _is_trusted(peer: str, trusted: tuple[str, ...]) -> bool:
+    if "*" in trusted or peer in trusted:
+        return True
+    try:
+        address = ip_address(peer)
+    except ValueError:
+        return False
+    for entry in trusted:
+        try:
+            if address in ip_network(entry, strict=False):
+                return True
+        except ValueError:
+            continue
+    return False
+
+
+def make_client_key(trusted: tuple[str, ...]) -> Callable[[Request], str]:
+    """Rate-limit key: the direct peer, or the right-most X-Forwarded-For value if the peer is trusted.
 
     Behind a reverse proxy (e.g. Hugging Face Spaces) every request shares the proxy's
     remote address. The proxy appends the real client to the right of X-Forwarded-For;
     values on the left come from the client and can be forged, so they are ignored.
+    A peer that is not a trusted proxy could forge the whole header, so it is ignored.
     """
-    forwarded = request.headers.get(FORWARDED_FOR, "")
-    hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
-    if hops:
-        return hops[-1]
-    return get_remote_address(request)
+
+    def client_key(request: Request) -> str:
+        peer = request.client.host if request.client else get_remote_address(request)
+        if _is_trusted(peer, trusted):
+            forwarded = _forwarded_client(request)
+            if forwarded:
+                return forwarded
+        return peer
+
+    return client_key
 
 
 class _RedactClientKey(logging.Filter):
@@ -72,6 +102,7 @@ class DemoGuardConfig:
     max_body_bytes: int
     rate: str
     start_rate: str
+    trusted_proxies: tuple[str, ...] = ()
 
 
 async def _send_json(send: Send, status_code: int, detail: str) -> None:
@@ -162,7 +193,10 @@ class DemoBodyGuard:
 
 def install_demo_guard(app: FastAPI, settings_like: DemoGuardConfig) -> None:
     """Add the demo guards. Call before SessionMiddleware is added so the session stays outermost."""
-    limiter = Limiter(key_func=client_key, default_limits=[settings_like.rate])
+    limiter = Limiter(
+        key_func=make_client_key(settings_like.trusted_proxies),
+        default_limits=[settings_like.rate],
+    )
     _redact_slowapi_log()
 
     # Per-path counters, like slowapi's default limits (key style "url").

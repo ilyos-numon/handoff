@@ -37,7 +37,13 @@ def _config(port: int, public: bool) -> uvicorn.Config:
             forwarded_allow_ips="*",
         )
     return uvicorn.Config(
-        APP, factory=True, host="localhost", port=port, workers=1, log_level="warning"
+        APP,
+        factory=True,
+        host="localhost",
+        port=port,
+        workers=1,
+        log_level="warning",
+        proxy_headers=False,
     )
 
 
@@ -59,6 +65,8 @@ def main(argv: list[str] | None = None) -> int:
     os.environ.setdefault("HANDOFF_AUTH", "on")
     os.environ.setdefault("HANDOFF_PROVIDER", "replay")
     os.environ["HANDOFF_DATA_DIR"] = str(args.data_dir)
+    if args.public:
+        os.environ.setdefault("HANDOFF_TRUSTED_PROXIES", "*")
     server = uvicorn.Server(_config(args.port, args.public))
     announced = asyncio.run(_serve(server, args.port))
     return 0 if announced else 1
