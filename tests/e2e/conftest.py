@@ -1,6 +1,7 @@
 """E2E fixtures: a real uvicorn subprocess per test, isolated data dir."""
 
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -202,3 +203,26 @@ def page() -> Iterator[Page]:
         finally:
             context.close()
             browser.close()
+
+
+@pytest.fixture(scope="session")
+def web_dist() -> Path:
+    if shutil.which("npm") is None:
+        pytest.fail("npm not found: source ~/.nvm/nvm.sh")
+    result = subprocess.run(
+        ["make", "web"], cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=300, check=False
+    )
+    index = PROJECT_ROOT / "web" / "dist" / "index.html"
+    if result.returncode != 0 or not index.is_file():
+        pytest.fail(f"make web failed ({result.returncode})\n{result.stderr[-2000:]}")
+    return index.parent
+
+
+@pytest.fixture
+def web_server(
+    start_server: Callable[[Path, dict[str, str]], ServerHandle], web_dist: Path
+) -> Callable[..., ServerHandle]:
+    def factory(data_dir: Path, extra: dict[str, str] | None = None) -> ServerHandle:
+        return start_server(data_dir, {"HANDOFF_WEB_DIST": str(web_dist), **(extra or {})})
+
+    return factory
