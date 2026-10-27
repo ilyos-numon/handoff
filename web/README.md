@@ -60,13 +60,13 @@ src/
 
 | # | 우회 위치 |
 |---|---|
-| 1 팀장 at-risk 원문 | `Api.atRiskForManager` 가 `evidence·body·uncertain_cues` 를 버린다 |
+| 1 팀장 at-risk 원문 | `Api.atRiskForManager` 가 `evidence·body·uncertain_cues` 를 버린다 (서버 해결됨, 유지) |
 | 2 CORS 없음 | `vite.config.ts` 프록시, `deploy/nginx.conf` |
 | 3 leaver 생략 시 403 | 모든 API 함수가 leaver 를 필수 인자로 받는다 |
 | 4 429 `error` 키 | `request()` 가 `detail ?? error` 로 읽는다 |
 | 5 시작만 해도 회차 소진 | 시작 버튼 잠금, 열린 세션은 이어하기 |
 | 6 마감 뒤에도 open | 타이머 0·복구 시 바로 `end` |
-| 7 요약의 이메일 원문 | `maskContacts()` 로 표시할 때 가림 |
+| 7 요약의 이메일 원문 | `maskContacts()` 로 표시할 때 가림 (서버 해결됨, 유지) |
 | 8 카드 id 변경 | 근거 칩이 없는 카드를 "갱신됨" 으로 표시 |
 | 9 언급 수 누적 | 질문 만들기 버튼 잠금, mentions 숫자 숨김 |
 | 10 대화 기록 API 없음 | `localStorage` 에 세션별 저장, 끝나면 삭제 |

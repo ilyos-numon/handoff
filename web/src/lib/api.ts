@@ -94,7 +94,8 @@ const qs = (o: Record<string, string | number | undefined | null>) => {
 };
 const L = (leaver: string) => `/leavers/${enc(leaver)}`;
 
-/** 팀장 화면에는 답변 원문 발췌가 가면 안 된다(07 #1). 한 곳에서 버린다. */
+/** 팀장 화면에는 답변 원문 발췌가 가면 안 된다(07 #1). 한 곳에서 버린다.
+ * 인증 켠 서버는 이미 빼고 보낸다(2026-10-27). 인증 끔 서버는 역할을 몰라 그대로 오므로 유지한다. */
 function stripForManager(rep: AtRiskReport): AtRiskReport<ManagerSafeCard> {
   return {
     ...rep,

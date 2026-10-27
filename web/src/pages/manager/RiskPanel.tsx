@@ -5,7 +5,8 @@ import { useLoad } from "../../lib/hooks";
 import { CARD_TYPE_LABEL, EVENT_LABEL, EVENTS } from "../../lib/labels";
 import type { ChangeEvent } from "../../lib/types";
 
-/** at-risk 는 팀장에게도 열려 있지만 답변 원문이 섞여 온다 → atRiskForManager 가 버린다(07 #1). */
+/** at-risk 는 팀장에게도 열려 있지만 답변 원문이 섞여 온다 → atRiskForManager 가 버린다(07 #1).
+ * 인증 켠 서버는 2026-10-27 부터 빼고 보낸다. 인증 끔 대비로 남긴다. */
 export function RiskPanel({ leaver }: { leaver: string }) {
   const [event, setEvent] = useState<ChangeEvent>("system_replaced");
   const { data, loading, error, reload } = useLoad(() => Api.atRiskForManager(leaver, event), [leaver, event]);

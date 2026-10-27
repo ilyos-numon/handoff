@@ -24,7 +24,8 @@ export function ago(iso: string): string {
 /** 서버는 유니코드 코드포인트로 센다(01 §6.4). */
 export const charLen = (s: string) => [...s].length;
 export const byteLen = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)).length;
-/** 요약에 남는 이메일·전화번호 원문을 화면에서 가린다(07 #7). */
+/** 요약에 남는 이메일·전화번호 원문을 화면에서 가린다(07 #7).
+ * 서버도 2026-10-27 부터 가려서 보낸다. 예전 서버 응답 대비로 유지한다. */
 export function maskContacts(s: string): string {
   return s
     .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "[이메일]")
