@@ -36,6 +36,9 @@ README 첫 화면에서 옮긴 긴 내용이다: 환경변수 전체, 데모 모
 | `HANDOFF_DEMO_RATE` | `120/minute` | 데모 모드 접속 주소별 요청 상한 |
 | `HANDOFF_DEMO_START_RATE` | `10/hour` | 접속 주소별 `/demo/start` 상한 |
 | `HANDOFF_DEMO_CASSETTE` | `src/handoff/demo/cassette.json` | 녹화 파일 경로 (`replay` 가 읽고 `record` 가 쓴다) |
+| `HANDOFF_WEB_DIST` | `web/dist` | 새 웹 프론트 빌드 폴더. `off` 거나 `index.html` 이 없으면 옛 정적 화면을 낸다 |
+| `HANDOFF_TRUSTED_PROXIES` | (빈 값) | `X-Forwarded-For` 를 믿을 직접 접속 주소(쉼표 목록: `*`·주소·CIDR). 빈 값이면 헤더를 무시한다. `handoff-demo --public` 은 기본 `*` |
+| `HANDOFF_API_DOCS` | 인증 켬이면 `off`, 끔이면 `on` | `/docs`·`/redoc`·`/openapi.json` 공개 여부 (`on`/`off`) |
 
 qwen 채팅 요청은 `enable_thinking=false` 로 보낸다 (추론 모드를 끄고 응답 시간을 줄인다).
 

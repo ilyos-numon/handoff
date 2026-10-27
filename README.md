@@ -9,11 +9,12 @@
 [90초 영상](docs/media/demo.mp4) · 팀장·퇴사자·후임 화면을 한 페이지에서 나란히 보는 데모
 
 ## 바로 해 보기
-[uv](https://docs.astral.sh/uv/) 만 있으면 된다. API 키는 필요 없다 (녹화된 답을 재생한다).
+[uv](https://docs.astral.sh/uv/) 와 Node.js 24(npm 포함)가 있으면 된다. API 키는 필요 없다 (녹화된 답을 재생한다).
 ```bash
 uv sync
-make demo        # "데모 주소: http://localhost:8780/demo" 가 뜨면 브라우저로 연다
+make demo        # 웹 화면을 빌드한 뒤 "데모 주소: http://localhost:8780/demo" 가 뜨면 브라우저로 연다
 ```
+`make demo` 는 먼저 `make web` 으로 `web/` 의 화면을 빌드한다. 이미 최신이면 빌드를 건너뛴다.
 `/demo` 를 열면 바로 나만의 연습 공간이 생기고 퇴사자의 첫 세션 답변까지 기록돼 있다(퇴사자 창에는 열린 세션이 없어 `세션 시작` 을 누르면 두 번째 세션이 이어진다). 이어서 할 일은 [시연 시나리오](docs/demo-scenario.md) 11단계부터.
 
 ## 실제 사용 흐름
@@ -23,15 +24,18 @@ make demo        # "데모 주소: http://localhost:8780/demo" 가 뜨면 브라
 4. 퇴사자는 매일 15분 질문에 답하고, 팀장은 빈 업무 영역 리포트를 보고, 후임은 기록에 질문한다.
 
 ## 구조
+화면은 `web/` 의 React 앱이다. `make web` 이 `web/dist` 로 빌드하면 API 서버가 같은 출처에서 그 파일을 그대로 내준다. 별도 프론트 서버나 CORS 설정이 없다.
 ```mermaid
 flowchart LR
+  W["web/ React + Vite"] -- make web --> D["web/dist"]
   subgraph Browser["브라우저"]
     L["퇴사자 화면 /"]
     C["후임 화면 /chat"]
     R["팀장 화면 /report"]
     A["관리 화면 /admin"]
   end
-  subgraph API["FastAPI"]
+  subgraph API["FastAPI (화면과 API 같은 출처)"]
+    F["화면 서빙: web/dist"]
     G["RBAC: 초대 링크 쿠키 + casbin 정책"]
     S["세션 서비스"]
     K["지식 루프 서비스: 카드·빈 구멍·후임 질문·산출물"]
@@ -41,6 +45,8 @@ flowchart LR
     Q[("Qdrant 로컬")]
   end
   P["LLM 공급자: fake / qwen / replay"]
+  D --> F
+  F -. 화면 .-> L & C & R & A
   L & C & R & A --> G
   G --> S & K
   S & K --> DB
@@ -73,21 +79,32 @@ flowchart LR
 환경변수 전체 표, API 예시, 품질 평가 수치는 [docs/usage.md](docs/usage.md) 에 있다. 설계 결정은 [docs/decisions.md](docs/decisions.md), 공개 배포는 [docs/deploy.md](docs/deploy.md), 완성 모습은 [docs/vision.md](docs/vision.md).
 
 ### 요구사항과 설치
-- [uv](https://docs.astral.sh/uv/) 만 설치하면 된다. Python 3.12는 uv가 설치한다. `uv sync`
+- [uv](https://docs.astral.sh/uv/) 와 Node.js 24(npm 포함)가 필요하다. Python 3.12는 uv가 설치한다. `uv sync` 후 `make web` 으로 화면을 빌드한다(`web/` 에서 `npm ci`·`npm run build`, 최신이면 건너뜀).
 - 실제 공급자(qwen)로 돌릴 때만 OpenAI 호환 Qwen API 키가 필요하다. fake 모드와 데모 모드(replay)는 키 없이 돈다.
 - 설정을 바꾸려면 `cp .env.example .env` 후 값을 수정하고 명령에 `--env-file .env` 를 붙인다 (앱은 `.env` 를 직접 읽지 않는다). 키는 `.env` 에만 두고 커밋하지 않는다.
 
 ### 서버 실행
 fake 공급자 (키 불필요):
 ```bash
+make web
 uv run uvicorn handoff.main:create_app --factory --port 8780
 ```
+`web/dist` 가 있으면 `/` 부터 새 화면이 뜬다. 빌드가 없거나 `HANDOFF_WEB_DIST=off` 를 주면 `src/handoff/static/` 의 옛 화면으로 돌아간다.
 
 qwen 공급자 (`.env` 에 `HANDOFF_PROVIDER=qwen`, `HANDOFF_LLM_API_KEY` 설정):
 ```bash
 uv run --env-file .env uvicorn handoff.main:create_app --factory --port 8780
 ```
 준비 확인: `curl -sf http://localhost:8780/health` → `{"status":"ok"}`. 인증 없이 띄우기(평가 도구, API 예시용)는 앞에 `HANDOFF_AUTH=off` 를 붙인다.
+
+이번에 생긴 설정 세 가지(나머지 환경변수는 [docs/usage.md](docs/usage.md)):
+- `HANDOFF_WEB_DIST`: 서빙할 빌드 폴더. 기본은 저장소의 `web/dist`, `off` 면 옛 화면.
+- `HANDOFF_TRUSTED_PROXIES`: `X-Forwarded-For` 를 믿을 상대(쉼표 목록, `*`·IP·CIDR·호스트). 기본은 빈 값이라 헤더를 무시하고 접속 주소로 데모 요청 수를 센다. `handoff-demo --public`(Docker)은 기본 `*`. 리버스 프록시를 앞에 두면 그 주소(예: `localhost`)를 준다.
+- `HANDOFF_API_DOCS`: `/docs`·`/redoc`·`/openapi.json` 을 열지(`on`/`off`). 기본은 인증을 따라 인증 켬이면 닫히고 인증 끔이면 열린다.
+
+데모 모드를 `make demo` 대신 `uv run uvicorn …` 으로 직접 띄울 때는 `--no-proxy-headers` 를 붙인다. uvicorn 은 기본으로 루프백 상대의 `X-Forwarded-For` 를 믿어 접속 주소를 바꿔 버리므로, 그대로 두면 헤더를 바꿔 요청 수 제한을 피할 수 있다(`FORWARDED_ALLOW_IPS` 를 실제 프록시로 좁혀도 된다).
+
+화면을 고치며 개발할 때는 Vite 개발 서버(`http://localhost:5173`)가 API 경로를 8780 으로 넘긴다. 실행 방법은 [web/README.md](web/README.md).
 
 ### 역할과 초대 링크
 서버는 기본으로 인증을 켠 채 뜬다 (`HANDOFF_AUTH=on`). 계정·비밀번호·이름·이메일은 받지 않는다. 사람마다 역할 하나와 퇴사자 id 하나를 담은 서명된 초대 링크를 만들어 건네면, 링크를 연 브라우저에 로그인 쿠키(`handoff_session`, HttpOnly, 7일)가 붙고 그 역할의 화면으로 이동한다.
@@ -134,6 +151,7 @@ uv run python -m handoff.rbac.cli invite --role manager --leaver default
 | `http://localhost:8780/chat` | 후임 | 지식베이스 질문(`/kb/ask`)과 근거, 확실도, 답이 없을 때 "퇴사자에게 질문을 넘겼다" 안내와 먼저 물어볼 역할, "왜 이렇게 돼 있나" 울타리 질문, 인수인계 산출물 보기 |
 | `http://localhost:8780/admin` | 관리자 | 퇴사자 등록(별칭), 퇴사자·후임·팀장 초대 링크 만들기·복사 |
 | `http://localhost:8780/demo` | 방문자 (데모 모드) | 연습 공간 만들기, 세 역할 화면 나란히 보기, 역할 전환 |
+| `http://localhost:8780/intro` | 누구나 | 서비스 소개. 인증 켠 서버에서 로그인 전에 `/` 로 오면 여기로 보낸다 (새 화면 빌드가 있을 때만) |
 | `http://localhost:8780/report` | 팀장 | 네 축별 커버리지(큐 질문 답변 수 포함), 비어 있는 주제, 모의 자료 불러오기·자료로 질문 만들기·사전 부검 질문·빈 구멍 다시 찾기·우선 질문 지정, 질문 큐, 빈 구멍, 아무도 확실히 모르는 영역, 산출물 5종 만들기·보기 |
 
 각 화면은 `/auth/me` 로 역할을 확인하고, 로그인 전이면 "초대 링크로 들어와 주세요.", 다른 역할이면 "이 화면을 볼 권한이 없습니다." 를 보여 준다. 퇴사자 id 는 초대 링크에서 온다. 인증을 끈 서버(`HANDOFF_AUTH=off`)에서는 예전처럼 `?leaver=<id>` 로 고른다 (생략 시 `default`).
@@ -146,8 +164,9 @@ uv run python -m handoff.rbac.cli invite --role manager --leaver default
 uv run pytest tests/unit -q
 ```
 
-E2E 테스트 (서버를 테스트가 직접 띄운다, fake 공급자):
+E2E 테스트 (서버를 테스트가 직접 띄운다, fake 공급자). 새 화면을 검사하는 테스트가 `web/dist` 를 쓰므로 먼저 빌드한다:
 ```bash
+make web
 uv run pytest tests/e2e -q
 ```
 
