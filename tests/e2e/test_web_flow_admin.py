@@ -49,7 +49,7 @@ def _admin_link(url: str, data_dir: Path) -> str:
 
 
 def _new_page(browser: Browser) -> Page:
-    page = browser.new_context(viewport={"width": 1100, "height": 900}).new_page()
+    page = browser.new_context(viewport={"width": 1100, "height": 900}, reduced_motion="reduce").new_page()
     page.set_default_timeout(20_000)
     return page
 
