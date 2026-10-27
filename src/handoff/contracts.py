@@ -328,6 +328,54 @@ class AtRiskReport(BaseModel):
     cards: list[AtRiskCard]
 
 
+class ManagerSafeCard(BaseModel):
+    """팀장용 카드: KnowledgeCard 에서 evidence·body·uncertain_cues 를 뺀 것."""
+
+    id: str
+    created_at: datetime
+    leaver: str
+    role: str
+    session_id: str
+    type: CardType
+    title: str
+    entities: list[str]
+    confidence: float
+    certainty: Certainty
+    invalidated_when: list[InvalidationCondition]
+
+
+class ManagerAtRiskCard(BaseModel):
+    card: ManagerSafeCard
+    conditions: list[InvalidationCondition]
+
+
+class ManagerAtRiskReport(BaseModel):
+    leaver: str
+    event: ChangeEvent
+    label: str
+    target: str | None
+    cards: list[ManagerAtRiskCard]
+
+
+def to_manager_report(report: AtRiskReport) -> ManagerAtRiskReport:
+    """Drop evidence, body and uncertain cues from every card of an at-risk report."""
+    return ManagerAtRiskReport(
+        leaver=report.leaver,
+        event=report.event,
+        label=report.label,
+        target=report.target,
+        cards=[
+            ManagerAtRiskCard(
+                card=ManagerSafeCard.model_validate(
+                    r.card.model_dump(exclude={"evidence", "body", "uncertain_cues"})
+                ),
+                conditions=r.conditions,
+            )
+            for r in report.cards
+        ],
+    )
+
+
 # ---- 빈 구멍
 class ContradictionDraft(BaseModel):
     card_ids: list[str] = Field(min_length=2, max_length=2)

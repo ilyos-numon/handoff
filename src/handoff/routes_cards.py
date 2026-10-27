@@ -14,8 +14,11 @@ from handoff.contracts import (
     KnowledgeCard,
     KnowledgeConflict,
     KnowledgeNotFound,
+    ManagerAtRiskReport,
+    to_manager_report,
 )
 from handoff.providers import ProviderError
+from handoff.rbac.deps import current_principal, get_auth
 from handoff.session import LEAVER_PATTERN
 
 router = APIRouter()
@@ -41,14 +44,22 @@ def list_cards(
     return service.list(leaver, card_type, min_confidence, certainty)
 
 
-@router.get("/leavers/{leaver}/cards/at-risk", response_model=AtRiskReport)
+@router.get(
+    "/leavers/{leaver}/cards/at-risk", response_model=AtRiskReport | ManagerAtRiskReport
+)
 def cards_at_risk(
+    request: Request,
     leaver: LeaverPath,
     service: CardServiceDep,
     event: Annotated[ChangeEvent, Query()],
     target: Annotated[str | None, Query()] = None,
-) -> AtRiskReport:
-    return service.at_risk(leaver, event, target)
+) -> AtRiskReport | ManagerAtRiskReport:
+    report = service.at_risk(leaver, event, target)
+    if get_auth(request) is not None:
+        principal = current_principal(request)
+        if principal is not None and principal.role == "manager":
+            return to_manager_report(report)
+    return report
 
 
 @router.post("/sessions/{session_id}/cards/extract", response_model=list[KnowledgeCard])
