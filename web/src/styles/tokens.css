@@ -1,0 +1,58 @@
+/* 색은 세 가지 역할만 한다: 바탕(종이), 글자(먹), 강조(소나무 초록 하나).
+   호박색은 '불확실'·주의, 붉은 흙색은 오류에만 쓴다. */
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #efede7;
+  --ink: #17181a;
+  --ink-2: #4a4d52;
+  --muted: #86888c;
+  --line: #e3e0d8;
+  --line-strong: #cfcbc1;
+  --accent: #1f5c4c;
+  --accent-hover: #184b3e;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2ece7;
+  --warm: #b8741f;
+  --warm-soft: #f6ead8;
+  --danger: #b4442b;
+  --danger-soft: #f6e2db;
+  --role-leaver: #c9822a;
+  --role-successor: #1f5c4c;
+  --role-manager: #3f5185;
+  --role-admin: #6b6d72;
+
+  --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121314;
+    --surface: #1a1b1d;
+    --surface-2: #222326;
+    --ink: #ecebe7;
+    --ink-2: #b5b4af;
+    --muted: #7d7e81;
+    --line: #2b2c2f;
+    --line-strong: #3a3b3f;
+    --accent: #72c2a9;
+    --accent-hover: #8bd2bb;
+    --accent-ink: #0c1d18;
+    --accent-soft: #1b2c27;
+    --warm: #e2aa5c;
+    --warm-soft: #2d251a;
+    --danger: #e48a72;
+    --danger-soft: #2e1d18;
+    --role-leaver: #e2aa5c;
+    --role-successor: #72c2a9;
+    --role-manager: #94a6dc;
+    --role-admin: #9a9ca0;
+    color-scheme: dark;
+  }
+}
