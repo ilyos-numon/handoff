@@ -9,6 +9,7 @@ from pathlib import Path
 SUPPORTED_PROVIDERS = frozenset({"fake", "qwen", "replay", "record"})
 DEFAULT_LLM_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 DEFAULT_CASSETTE: Path = Path(__file__).parent / "demo" / "cassette.json"
+DEFAULT_WEB_DIST: Path = Path(__file__).resolve().parents[2] / "web" / "dist"
 
 _DEFAULT_MIN_SCORE = {"fake": 0.25, "qwen": 0.40, "replay": 0.25, "record": 0.25}
 _FAKE_EMBED_PROVIDERS = frozenset({"fake", "replay", "record"})
@@ -45,6 +46,9 @@ class Settings:
     demo_start_rate: str = "10/hour"
     demo_cassette: Path = DEFAULT_CASSETTE
     public_url: str = ""
+    web_dist: Path | None = None
+    trusted_proxies: tuple[str, ...] = ()
+    api_docs: bool = True
 
 
 def _float(source: Mapping[str, str], name: str, default: float) -> float:
@@ -79,6 +83,20 @@ def _on_off(source: Mapping[str, str], name: str, default: bool) -> bool:
     if raw == "off":
         return False
     raise ValueError(f"{name} must be on or off")
+
+
+def _web_dist(source: Mapping[str, str]) -> Path | None:
+    raw = source.get("HANDOFF_WEB_DIST")
+    if raw is None:
+        return DEFAULT_WEB_DIST
+    if raw == "off":
+        return None
+    return Path(raw)
+
+
+def _csv(source: Mapping[str, str], name: str) -> tuple[str, ...]:
+    raw = source.get(name, "")
+    return tuple(item.strip() for item in raw.split(",") if item.strip())
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
@@ -124,7 +142,17 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         demo_start_rate=source.get("HANDOFF_DEMO_START_RATE", "10/hour"),
         demo_cassette=Path(source.get("HANDOFF_DEMO_CASSETTE", str(DEFAULT_CASSETTE))),
         public_url=source.get("HANDOFF_PUBLIC_URL", "").rstrip("/"),
+        web_dist=_web_dist(source),
+        trusted_proxies=_csv(source, "HANDOFF_TRUSTED_PROXIES"),
+        api_docs=_on_off(source, "HANDOFF_API_DOCS", not auth),
     )
+
+
+def api_docs_kwargs(settings: Settings) -> dict[str, str | None]:
+    """FastAPI kwargs: {} when docs are on, all doc URLs set to None when off."""
+    if settings.api_docs:
+        return {}
+    return {"docs_url": None, "redoc_url": None, "openapi_url": None}
 
 
 def collection_name(settings: Settings) -> str:

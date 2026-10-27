@@ -5,6 +5,7 @@ import pytest
 from handoff.config import (
     DEFAULT_CASSETTE,
     DEFAULT_LLM_BASE_URL,
+    DEFAULT_WEB_DIST,
     SUPPORTED_PROVIDERS,
     Settings,
     collection_name,
@@ -20,6 +21,8 @@ def test_defaults_when_env_empty() -> None:
         min_score=0.25,
         collection="handoff_kb",
         auth=True,
+        web_dist=DEFAULT_WEB_DIST,
+        api_docs=False,
     )
     assert isinstance(settings.data_dir, Path)
 
