@@ -18,7 +18,7 @@ from handoff.demo.sandbox import (
 )
 from handoff.rbac.deps import get_auth
 from handoff.rbac.tokens import HOME_PATH
-from handoff.routes import STATIC_DIR
+from handoff.web import page
 
 DEMO_OFF = "demo off"
 DEMO_BUSY = "demo busy"
@@ -129,8 +129,8 @@ def _new_sandbox(request: Request, runtime: DemoRuntime) -> StartResponse:
 
 
 @router.get("/demo", response_class=HTMLResponse, include_in_schema=False)
-def demo_page(_runtime: RuntimeDep) -> HTMLResponse:
-    return HTMLResponse((STATIC_DIR / "demo.html").read_text(encoding="utf-8"))
+def demo_page(request: Request, _runtime: RuntimeDep) -> HTMLResponse:
+    return page(request, "demo.html")
 
 
 @router.post("/demo/start", response_model=StartResponse)

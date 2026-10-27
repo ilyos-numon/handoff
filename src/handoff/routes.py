@@ -31,6 +31,7 @@ from handoff.session import (
     SessionTimeOverError,
     TreeExhaustedError,
 )
+from handoff.web import page
 
 UNKNOWN_ROLE = "unknown role"
 SESSION_NOT_FOUND = "session not found"
@@ -192,20 +193,16 @@ def query_kb(body: KBQueryRequest, services: ServicesDep) -> KBAnswer:
         ) from None
 
 
-def _page(name: str) -> HTMLResponse:
-    return HTMLResponse((STATIC_DIR / name).read_text(encoding="utf-8"))
-
-
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
-def session_page() -> HTMLResponse:
-    return _page("session.html")
+def session_page(request: Request) -> HTMLResponse:
+    return page(request, "session.html")
 
 
 @router.get("/chat", response_class=HTMLResponse, include_in_schema=False)
-def chat_page() -> HTMLResponse:
-    return _page("chat.html")
+def chat_page(request: Request) -> HTMLResponse:
+    return page(request, "chat.html")
 
 
 @router.get("/report", response_class=HTMLResponse, include_in_schema=False)
-def report_page() -> HTMLResponse:
-    return _page("report.html")
+def report_page(request: Request) -> HTMLResponse:
+    return page(request, "report.html")

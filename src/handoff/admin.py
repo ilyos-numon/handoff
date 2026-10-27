@@ -16,7 +16,7 @@ from handoff.privacy import scrub_contacts
 from handoff.rbac.deps import get_auth
 from handoff.rbac.policy import AuthConfig
 from handoff.rbac.tokens import Principal, issue_invite
-from handoff.routes import STATIC_DIR
+from handoff.web import page
 
 ALIAS_MAX = 30
 AUTH_DISABLED = "auth disabled"
@@ -126,8 +126,8 @@ RegistryDep = Annotated[LeaverRegistry, Depends(get_registry)]
 
 
 @router.get("/admin", response_class=HTMLResponse, include_in_schema=False)
-def admin_page() -> HTMLResponse:
-    return HTMLResponse((STATIC_DIR / "admin.html").read_text(encoding="utf-8"))
+def admin_page(request: Request) -> HTMLResponse:
+    return page(request, "admin.html")
 
 
 @router.get("/admin/leavers", response_model=list[LeaverRecord])
