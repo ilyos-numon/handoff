@@ -118,10 +118,10 @@ class KnowledgeBase:
         self._client.upsert(collection_name=self._collection, points=points)
         return len(points)
 
-    def query(self, question: str, top_k: int = 3, leaver: str | None = None) -> KBAnswer:
+    def search(self, question: str, top_k: int = 3, leaver: str | None = None) -> list[Citation]:
         vector = self._embedder.embed([question])[0]
         if not any(vector):
-            return _not_found()
+            return []
         query_filter = (
             Filter(must=[FieldCondition(key="leaver", match=MatchValue(value=leaver))])
             if leaver is not None
@@ -150,26 +150,48 @@ class KnowledgeBase:
                     created_at=payload.get("created_at"),
                 )
             )
+        citations.sort(key=lambda c: c.score, reverse=True)
+        return citations
+
+    def answer_from(
+        self, question: str, citations: list[Citation], *, fallback_excerpt: bool = False
+    ) -> KBAnswer:
+        """Compose, scrub and verify an answer from ``citations``.
+
+        ``fallback_excerpt`` is for citations that are the leaver's own answer to this very
+        question: when compose or verification drops everything, the first excerpt is the answer.
+        """
         if not citations:
             return _not_found()
-        citations.sort(key=lambda c: c.score, reverse=True)
         try:
             answer = self._llm.compose_answer(question, citations)
         except ProviderError:
             return KBAnswer(found=True, answer=COMPOSE_FAILED_MESSAGE, citations=citations)
         if answer is None:
+            if fallback_excerpt:
+                return KBAnswer(found=True, answer=citations[0].excerpt, citations=citations)
             return _not_found()
         answer = scrub_contacts(answer)
         if self._verifier is None:
             return KBAnswer(found=True, answer=answer, citations=citations)
         kept, removed = self._verifier(question, answer, citations)
         if kept is None:
+            if fallback_excerpt:
+                return KBAnswer(
+                    found=True,
+                    answer=citations[0].excerpt,
+                    citations=citations,
+                    claims_removed=removed,
+                )
             return KBAnswer(
                 found=False, answer=NOT_FOUND_MESSAGE, citations=[], claims_removed=removed
             )
         return KBAnswer(
             found=True, answer=scrub_contacts(kept), citations=citations, claims_removed=removed
         )
+
+    def query(self, question: str, top_k: int = 3, leaver: str | None = None) -> KBAnswer:
+        return self.answer_from(question, self.search(question, top_k, leaver))
 
     def purge_leaver(self, leaver: str) -> None:
         self._client.delete(

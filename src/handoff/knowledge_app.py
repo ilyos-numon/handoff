@@ -114,7 +114,7 @@ def build_knowledge(settings: Settings, llm: LLM, session_store: SessionStore) -
         cards=cards,
         gaps=GapService(llm, store, session_store),
         verifier=ClaimVerifier(llm) if settings.verify_claims else None,
-        successor=SuccessorService(store, router=router),
+        successor=SuccessorService(store, router=router, sessions=session_store),
         artifacts=ArtifactService(llm, store),
         drills=DrillService(llm, store),
         hooks=KnowledgeHooks(store, session_store, depth, cards, settings.queue_per_session),
