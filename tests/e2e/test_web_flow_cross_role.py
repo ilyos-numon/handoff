@@ -156,15 +156,16 @@ def test_cross_role_loop_reaches_successor_and_manager(
     expect(done).to_be_visible()
     shot(lea, "web-x-04-leaver-closed")
 
-    # successor: handed list shows it answered; re-ask returns a linked answer with evidence
+    # successor: handed list shows it answered; opening it shows the leaver answer in the thread
     suc.reload()
     suc.get_by_role("tab", name="넘긴 질문").click()
     item = suc.get_by_role("listitem").filter(has_text=QUESTION)
     expect(item).to_have_count(1)
     expect(item.get_by_text("답변됨")).to_be_visible()
-    item.get_by_role("button", name="다시 묻기").click()
-    expect(suc.get_by_text(re.compile(r"근거 (확실|불확실)"))).to_be_visible()
-    expect(suc.get_by_text(re.compile(r"세션 1 · "))).to_be_visible()
+    item.get_by_role("button", name=re.compile(re.escape(QUESTION))).click()
+    thread = suc.get_by_role("region", name="질문 대화")
+    expect(thread.get_by_text(ANSWER_MARK)).to_be_visible()
+    expect(thread.get_by_text(re.compile(r"세션 1"))).to_be_visible()
     shot(suc, "web-x-05-successor-linked-answer")
     items = suc.request.get(f"{url}/leavers/{LEAVER}/successor-questions").json()
     assert len(items) == 1, items
