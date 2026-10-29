@@ -1,3 +1,5 @@
+> 기본 공개 데모는 Cloudflare Containers 다([deploy-cloudflare.md](deploy-cloudflare.md)). 이 문서(Hugging Face Spaces)는 대안이다.
+
 # 공개 데모 배포 (Hugging Face Spaces)
 
 배포 상태: 일시 중단 (2026-10-23) — 업로드 완료(huggingface.co/spaces/fdasfdsdasfasdf/handoff, 공개, AUTH secret 설정). 실행은 "Quota exceeded for flavor cpu-basic: limit=0" 로 거부됨. 계정이 당일 생성돼 이메일 인증 전 무료 실행 한도가 0 인 것으로 추정. 재개: 계정 이메일 인증 → `HfApi().restart_space("fdasfdsdasfasdf/handoff")` → /demo 200 확인 → README 데모 링크 교체. 대안: 같은 Dockerfile 로 Render·Koyeb.
