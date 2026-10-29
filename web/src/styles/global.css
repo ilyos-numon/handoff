@@ -339,3 +339,28 @@ button, input, textarea, select { font: inherit; color: inherit; }
   .demo-pane.focus { display: flex; }
   .demo-head { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
+
+.panel-title { display: flex; align-items: center; gap: 0; }
+.help { position: relative; display: inline-flex; align-items: center; vertical-align: middle; }
+.help-btn { width: 32px; height: 32px; margin: -5px -5px -5px -1px; padding: 0; border: 0; background: transparent; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); }
+.help-dot { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 650; line-height: 1; transition: color .15s, border-color .15s, background .15s; }
+.help-btn:hover .help-dot, .help-btn[aria-expanded="true"] .help-dot { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.help-btn:focus-visible { border-radius: 50%; }
+.help-pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; width: max-content;
+  max-width: min(320px, calc(100vw - 24px)); padding: 12px 14px; text-align: left;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); font-size: 0.86rem; font-weight: 400; line-height: 1.55; letter-spacing: 0;
+  white-space: normal; animation: fadeIn .18s var(--ease) both;
+}
+.help-pop strong { display: block; padding-right: 44px; margin-bottom: 4px; font-weight: 650; }
+.help-pop p { margin: 0; color: var(--ink-2); }
+.help-close { position: absolute; top: 8px; right: 8px; min-height: 28px; padding: 2px 8px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); font-size: 0.8rem; cursor: pointer; }
+.help-close:hover { color: var(--ink); background: var(--surface-2); }
+@media (max-width: 480px) {
+  .help-pop { position: fixed; left: 12px; right: 12px; bottom: 12px; top: auto; width: auto; max-width: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .help-pop { animation: none; }
+  .help-dot { transition: none; }
+}

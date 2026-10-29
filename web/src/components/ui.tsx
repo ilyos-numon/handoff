@@ -2,6 +2,8 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { userMessage, type ApiError } from "../lib/api";
 import { CERTAINTY_LABEL } from "../lib/labels";
 import type { Certainty } from "../lib/types";
+import type { HelpKey } from "../lib/help";
+import { HelpTip } from "./HelpTip";
 
 export function Button({ busy, variant, size, children, ...rest }:
   ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean; variant?: "primary" | "ghost"; size?: "sm" | "lg" }) {
@@ -32,13 +34,16 @@ export function Empty({ children }: { children: ReactNode }) {
   return <div className="empty">{children}</div>;
 }
 
-export function Panel({ title, desc, action, children, className }:
-  { title?: ReactNode; desc?: ReactNode; action?: ReactNode; children: ReactNode; className?: string }) {
+export function Panel({ title, desc, action, children, className, help }:
+  { title?: ReactNode; desc?: ReactNode; action?: ReactNode; children: ReactNode; className?: string; help?: HelpKey }) {
   return (
     <section className={["panel", className].filter(Boolean).join(" ")}>
       {(title || action) && (
         <div className="panel-head">
-          <div><h2>{title}</h2>{desc && <p>{desc}</p>}</div>
+          <div>
+            {help ? <div className="panel-title"><h2>{title}</h2><HelpTip k={help} /></div> : <h2>{title}</h2>}
+            {desc && <p>{desc}</p>}
+          </div>
           {action}
         </div>
       )}
