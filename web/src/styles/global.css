@@ -175,7 +175,16 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .skeleton { height: 12px; border-radius: 4px; background: linear-gradient(90deg, var(--surface-2), var(--line), var(--surface-2)); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
-.shell-title { color: var(--muted); font-size: 0.88rem; padding-left: 12px; border-left: 1px solid var(--line); }
+.shell-title { color: var(--muted); font-size: 0.88rem; padding-left: 12px; border-left: 1px solid var(--line); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shell-top-inner > .brand, .shell-top-inner > .role-chip, .shell-top-inner > .btn { white-space: nowrap; flex-shrink: 0; }
+.shell-help-icon { display: none; }
+@media (max-width: 560px) {
+  .shell-top-inner { gap: 8px; }
+  .shell-title { display: none; }
+  .shell-help { min-width: 32px; justify-content: center; }
+  .shell-help-icon { display: inline; font-weight: 700; }
+  .shell-help-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
 .blocked { max-width: 520px; margin: 10vh auto 0; text-align: center; }
 .blocked p { margin-top: 8px; }
 .blocked .row { justify-content: center; }
