@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { Logo } from "../components/Logo";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { useApp } from "../lib/app";
 import { INTRO_ROLES, ROLE_INTROS, type IntroRole } from "../lib/intro-roles";
 import { ROLE_HOME, ROLE_LABEL } from "../lib/labels";
@@ -24,6 +25,7 @@ export default function RoleIntroPage() {
         <Link to="/intro" className="brand"><Logo />Handoff</Link>
         <nav className="row">
           {me?.role && !mine && <Link className="btn sm" to={ROLE_HOME[me.role]}>{ROLE_LABEL[me.role]} 화면으로</Link>}
+          <ThemeToggle />
         </nav>
       </header>
 

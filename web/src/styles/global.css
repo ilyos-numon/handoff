@@ -185,6 +185,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
   .shell-help-icon { display: inline; font-weight: 700; }
   .shell-help-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
+.btn.theme-toggle { width: 32px; min-width: 32px; height: 32px; padding: 0; justify-content: center; flex-shrink: 0; }
+.theme-toggle svg { display: block; }
 .blocked { max-width: 520px; margin: 10vh auto 0; text-align: center; }
 .blocked p { margin-top: 8px; }
 .blocked .row { justify-content: center; }
@@ -333,6 +335,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .demo-page { min-height: 100vh; display: flex; flex-direction: column; }
 .demo-head { display: flex; gap: 20px; align-items: center; padding: 14px var(--gutter); border-bottom: 1px solid var(--line); }
 .demo-head p { max-width: 90ch; }
+.demo-head > .brand { flex-shrink: 0; white-space: nowrap; }
+.demo-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .demo-wait { display: flex; gap: 10px; align-items: center; justify-content: center; padding: 20vh 0; color: var(--muted); }
 .demo-panes { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); }
 .demo-pane { margin: 0; display: flex; flex-direction: column; background: var(--bg); min-height: 0; }

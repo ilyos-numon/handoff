@@ -7,6 +7,7 @@ import { MotionPathPlugin } from "gsap/MotionPathPlugin";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 import { useGSAP } from "@gsap/react";
 import { Logo } from "../components/Logo";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { useApp } from "../lib/app";
 import { ROLE_HOME, ROLE_LABEL } from "../lib/labels";
 import "../styles/intro.css";
@@ -224,6 +225,7 @@ export default function IntroPage() {
           <a className="btn ghost sm" href="#for-roles">역할별 안내</a>
           {demo?.demo && <a className="btn ghost sm" href="/demo">데모</a>}
           {home && me?.role && <Link className="btn sm" to={ROLE_HOME[me.role]}>{ROLE_LABEL[me.role]} 화면으로</Link>}
+          <ThemeToggle />
         </nav>
       </header>
 

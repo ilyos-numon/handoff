@@ -6,6 +6,7 @@ import { ROLE_LABEL } from "../lib/labels";
 import type { Role } from "../lib/types";
 import { DemoBar } from "./DemoBar";
 import { Logo } from "./Logo";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Shell({ role, title, right, narrow, children }:
   { role?: Role; title?: string; right?: ReactNode; narrow?: boolean; children: ReactNode }) {
@@ -27,6 +28,7 @@ export function Shell({ role, title, right, narrow, children }:
               <i />{ROLE_LABEL[role]}
             </span>
           )}
+          {!IN_FRAME && <ThemeToggle />}
           {canLogout && <button type="button" className="btn ghost sm" onClick={logout}>나가기</button>}
         </div>
       </header>
