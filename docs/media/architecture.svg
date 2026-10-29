@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" width="1200" height="760" font-family="-apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <title>핸드오프 아키텍처</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <!-- heading -->
+  <text x="60" y="64" font-size="26" font-weight="700" fill="#1e293b">핸드오프 아키텍처</text>
+  <text x="60" y="94" font-size="15" fill="#64748b">공개 데모 배포 구성</text>
+
+  <!-- browser -->
+  <rect x="90" y="130" width="300" height="64" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="240" y="167" font-size="16" font-weight="600" fill="#1e293b" text-anchor="middle">방문자 브라우저</text>
+
+  <line x1="240" y1="194" x2="240" y2="246" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="256" y="225" font-size="14" fill="#475569">HTTPS</text>
+
+  <!-- worker -->
+  <rect x="90" y="250" width="300" height="64" rx="10" fill="#fff4e8" stroke="#f38020" stroke-width="1.5"/>
+  <text x="240" y="287" font-size="16" font-weight="600" fill="#1e293b" text-anchor="middle">Cloudflare Worker (요청 전달)</text>
+
+  <!-- container frame -->
+  <rect x="60" y="370" width="1080" height="300" rx="16" fill="#f8fafc" stroke="#f38020" stroke-width="1.5"/>
+  <rect x="480" y="388" width="10" height="10" rx="2" fill="#f38020"/>
+  <text x="500" y="398" font-size="15" font-weight="700" fill="#9a4a0c">Container: handoff-demo (1개, 10분 쉬면 정지)</text>
+
+  <line x1="240" y1="314" x2="240" y2="500" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="256" y="350" font-size="14" fill="#475569">X-Forwarded-For 덮어쓰기</text>
+
+  <!-- fastapi -->
+  <rect x="90" y="504" width="300" height="64" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="240" y="541" font-size="15" font-weight="600" fill="#1e293b" text-anchor="middle">FastAPI 앱 (화면 web/dist + API)</text>
+
+  <!-- fan-out bus -->
+  <path d="M390,536 L430,536" stroke="#475569" stroke-width="1.5" fill="none"/>
+  <path d="M430,452 L430,620" stroke="#475569" stroke-width="1.5" fill="none"/>
+  <line x1="430" y1="452" x2="476" y2="452" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="430" y1="536" x2="476" y2="536" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="430" y1="620" x2="476" y2="620" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- right column -->
+  <rect x="480" y="422" width="630" height="60" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="504" y="457" font-size="15" fill="#1e293b">초대 링크 쿠키 · 역할 정책</text>
+
+  <rect x="480" y="506" width="630" height="60" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="504" y="541" font-size="15" fill="#1e293b">SQLite + Qdrant (컨테이너 디스크, 정지 시 초기화)</text>
+
+  <rect x="480" y="590" width="630" height="60" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="504" y="625" font-size="15" fill="#1e293b">답 공급자: 녹화 재생 / 내장 예시 (공개 데모는 외부 LLM 없음)</text>
+
+  <!-- optional provider (local only) -->
+  <line x1="1060" y1="650" x2="1060" y2="716" stroke="#475569" stroke-width="1.5" stroke-dasharray="5 5" marker-end="url(#arrow)"/>
+  <text x="1044" y="700" font-size="14" fill="#475569" text-anchor="end">선택: qwen (로컬·키 있을 때만)</text>
+
+  <!-- legend -->
+  <text x="60" y="738" font-size="14" fill="#64748b">로컬: make demo 는 같은 FastAPI 앱을 그대로 띄운다</text>
+</svg>
