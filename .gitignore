@@ -55,3 +55,4 @@ data/
 demo-data/
 tests/e2e/screenshots/pd-*.png
 .wrangler/
+deploy/cloudflare/worker-configuration.d.ts

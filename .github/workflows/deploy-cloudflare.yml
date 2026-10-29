@@ -13,6 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24, cache: npm, cache-dependency-path: deploy/cloudflare/package-lock.json }
       - run: npm ci
+      - run: npm run types
       - run: npm run typecheck
       - run: npx wrangler deploy
         env:
