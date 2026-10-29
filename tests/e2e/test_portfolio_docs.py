@@ -27,11 +27,11 @@ NOT_DOING = [
 ]
 SVG_TEXTS = [
     "방문자 브라우저",
-    "Cloudflare Worker (요청 전달)",
-    "Container: handoff-demo (1개, 10분 쉬면 정지)",
+    "호스트: Render 무료 웹 서비스 (대안: Cloudflare Containers)",
+    "Docker 컨테이너 1개 (15분 쉬면 잠듦)",
     "FastAPI 앱 (화면 web/dist + API)",
     "초대 링크 쿠키 · 역할 정책",
-    "SQLite + Qdrant (컨테이너 디스크, 정지 시 초기화)",
+    "SQLite + Qdrant (컨테이너 디스크, 재시작 시 초기화)",
     "답 공급자: 녹화 재생 / 내장 예시 (공개 데모는 외부 LLM 없음)",
 ]
 CASE_H2 = ["## 문제", "## 원칙: 감시 도구가 되지 않게", "## 버그: 후임 재질문 루프", "## 품질 평가", "## 배운 것"]

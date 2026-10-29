@@ -18,17 +18,17 @@
   <line x1="240" y1="194" x2="240" y2="246" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
   <text x="256" y="225" font-size="14" fill="#475569">HTTPS</text>
 
-  <!-- worker -->
-  <rect x="90" y="250" width="300" height="64" rx="10" fill="#fff4e8" stroke="#f38020" stroke-width="1.5"/>
-  <text x="240" y="287" font-size="16" font-weight="600" fill="#1e293b" text-anchor="middle">Cloudflare Worker (요청 전달)</text>
+  <!-- host -->
+  <rect x="90" y="250" width="540" height="64" rx="10" fill="#ecfdf7" stroke="#14b8a6" stroke-width="1.5"/>
+  <text x="360" y="287" font-size="16" font-weight="600" fill="#1e293b" text-anchor="middle">호스트: Render 무료 웹 서비스 (대안: Cloudflare Containers)</text>
 
   <!-- container frame -->
-  <rect x="60" y="370" width="1080" height="300" rx="16" fill="#f8fafc" stroke="#f38020" stroke-width="1.5"/>
-  <rect x="480" y="388" width="10" height="10" rx="2" fill="#f38020"/>
-  <text x="500" y="398" font-size="15" font-weight="700" fill="#9a4a0c">Container: handoff-demo (1개, 10분 쉬면 정지)</text>
+  <rect x="60" y="370" width="1080" height="300" rx="16" fill="#f8fafc" stroke="#14b8a6" stroke-width="1.5"/>
+  <rect x="480" y="388" width="10" height="10" rx="2" fill="#14b8a6"/>
+  <text x="500" y="398" font-size="15" font-weight="700" fill="#0f766e">Docker 컨테이너 1개 (15분 쉬면 잠듦)</text>
 
   <line x1="240" y1="314" x2="240" y2="500" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="256" y="350" font-size="14" fill="#475569">X-Forwarded-For 덮어쓰기</text>
+  <text x="256" y="350" font-size="14" fill="#475569">PORT=7860 으로 전달</text>
 
   <!-- fastapi -->
   <rect x="90" y="504" width="300" height="64" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
@@ -46,7 +46,7 @@
   <text x="504" y="457" font-size="15" fill="#1e293b">초대 링크 쿠키 · 역할 정책</text>
 
   <rect x="480" y="506" width="630" height="60" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
-  <text x="504" y="541" font-size="15" fill="#1e293b">SQLite + Qdrant (컨테이너 디스크, 정지 시 초기화)</text>
+  <text x="504" y="541" font-size="15" fill="#1e293b">SQLite + Qdrant (컨테이너 디스크, 재시작 시 초기화)</text>
 
   <rect x="480" y="590" width="630" height="60" rx="10" fill="#ffffff" stroke="#93c5fd" stroke-width="1.5"/>
   <text x="504" y="625" font-size="15" fill="#1e293b">답 공급자: 녹화 재생 / 내장 예시 (공개 데모는 외부 LLM 없음)</text>

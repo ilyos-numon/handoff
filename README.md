@@ -1,4 +1,5 @@
 # 핸드오프 (Handoff)
+[![공개 데모](https://badgen.net/badge/demo/live%20on%20Render/46E3B7)](https://handoff-4krf.onrender.com/demo) [![License: MIT](https://badgen.net/badge/license/MIT/yellow)](LICENSE) ![Python 3.12](https://badgen.net/badge/Python/3.12/3776AB) ![FastAPI](https://badgen.net/badge/FastAPI/0.115%2B/009688) ![React 18](https://badgen.net/badge/React/18/61DAFB)
 
 **인수인계 문서는 쓰는 사람이 뭘 아는지 모른 채 쓰입니다. 그래서 핸드오프는 퇴사자에게 문서를 쓰게 하지 않고, 매일 15분 질문으로 끌어냅니다.**
 
@@ -15,10 +16,36 @@
 - **팀장은 빈 곳만 본다**: 네 축별 커버리지와 빈 구멍을 보고 꼭 남겨 달라는 우선 질문을 건다. 답변 원문·개인별 깊이는 볼 수 없다.
 - **산출물 5종**: 쌓인 지식 카드로 런북·30일 온보딩·함정 Top10·ADR·사전 부검 산출물을 만든다.
 
+## 화면 둘러보기
+데모 데이터는 퇴사자가 첫 세션을 막 마친 상태에서 시작한다. 화면은 `make demo` 와 같은 데모 모드(녹화 재생, API 키 없음)를 그대로 찍었다.
+
+<table>
+<tr>
+<td><img src="docs/media/screenshots/01-demo-split.png" width="420" alt="세 역할 나란히 보기"><br>세 역할을 한 페이지에서 나란히 보는 데모</td>
+<td><img src="docs/media/screenshots/02-leaver-session.png" width="420" alt="퇴사자 질문 세션"><br>퇴사자는 쓰지 않고 질문에 답한다</td>
+</tr>
+<tr>
+<td><img src="docs/media/screenshots/03-leaver-summary.png" width="420" alt="세션 요약"><br>세션을 마치면 오늘 요약 3줄</td>
+<td><img src="docs/media/screenshots/04-successor-answer.png" width="420" alt="후임 질문하기"><br>후임은 근거·확실도와 함께 답을 받는다</td>
+</tr>
+<tr>
+<td><img src="docs/media/screenshots/05-successor-thread.png" width="420" alt="후임 넘긴 질문"><br>기록에 없던 질문은 퇴사자에게 넘어가 대화로 돌아온다</td>
+<td><img src="docs/media/screenshots/06-manager-status-help.png" width="420" alt="팀장 빈 곳 보기"><br>팀장은 빈 곳만 본다 — "?" 로 용어 설명<br><sub>막대는 퇴사자가 세션을 마감할수록 찬다. 데모 첫 세션의 답은 모두 추가 질문이라 아직 0/10 이다.</sub></td>
+</tr>
+<tr>
+<td><img src="docs/media/screenshots/07-manager-ask.png" width="420" alt="팀장 질문 남기기"><br>꼭 남겨 달라는 우선 질문을 건다</td>
+<td><img src="docs/media/screenshots/08-manager-docs-runbook.png" width="420" alt="팀장 런북 생성"><br>쌓인 지식으로 런북 같은 산출물을 만든다</td>
+</tr>
+<tr>
+<td><img src="docs/media/screenshots/09-intro-roles-dark.png" width="420" alt="역할 소개 다크 테마"><br>역할 소개 (다크 테마)</td>
+<td><img src="docs/media/screenshots/10-mobile-successor.png" width="420" alt="모바일 후임 화면"><br>모바일 폭에서도 한 줄 상단 막대</td>
+</tr>
+</table>
+
 ## 아키텍처
 ![아키텍처](docs/media/architecture.svg)
 
-공개 데모는 Cloudflare Worker 가 요청을 컨테이너 1개(`handoff-demo`)로 넘기고, 그 안의 FastAPI 앱 하나가 화면(`web/dist`)과 API 를 같은 출처에서 내준다. 역할은 초대 링크 쿠키와 정책 파일로 나뉘고, 데이터는 컨테이너 디스크의 SQLite·Qdrant 에 있어 10분 동안 요청이 없어 컨테이너가 정지하면 초기화된다. 공개 데모의 답은 녹화 재생이나 내장 예시 답으로 만들어 외부 LLM 을 부르지 않는다. 로컬 `make demo` 는 같은 FastAPI 앱을 그대로 띄운다. 문제 정의부터 버그·품질 평가까지는 [케이스 스터디](docs/case-study.md)에 있다.
+공개 데모는 Render 무료 웹 서비스에 Docker 컨테이너 1개로 올라가 있고, 그 안의 FastAPI 앱 하나가 화면(`web/dist`)과 API 를 같은 출처에서 내준다. 역할은 초대 링크 쿠키와 정책 파일로 나뉘고, 데이터는 컨테이너 디스크의 SQLite·Qdrant 에 있다. Render 무료 서비스는 15분 동안 요청이 없으면 잠들고(첫 접속 30~60초), 재시작·재배포·깨어날 때 데이터가 초기화된다. 같은 `Dockerfile` 로 Cloudflare Containers 에도 올릴 수 있다(대안). 공개 데모의 답은 녹화 재생이나 내장 예시 답으로 만들어 외부 LLM 을 부르지 않는다. 로컬 `make demo` 는 같은 FastAPI 앱을 그대로 띄운다. 문제 정의부터 버그·품질 평가까지는 [케이스 스터디](docs/case-study.md)에 있다.
 
 ## 설계 원칙
 - **감시 도구가 아니다**: 팀장은 본인이 넣은 우선 질문의 답 외에는 답변 원문·세션 요약·개인별 깊이를 볼 수 없다. 정책에 없는 경로는 거부한다.
@@ -30,7 +57,7 @@
 - [케이스 스터디: 감시 도구가 되지 않는 인수인계](docs/case-study.md)
 - [90초 데모 영상 대본](docs/demo-video-script.md)
 - [역할극 사용성 테스트 키트](docs/usability-test-kit.md)
-- [공개 데모 배포 (Cloudflare Containers)](docs/deploy-cloudflare.md) · 대안: [Hugging Face Spaces 배포](docs/deploy.md)
+- [공개 데모 배포 (Render 무료 웹 서비스)](docs/deploy-render.md) · 대안: [Cloudflare Containers](docs/deploy-cloudflare.md) · [Hugging Face Spaces](docs/deploy.md)
 - [사용 문서: 환경변수·API·품질 평가](docs/usage.md)
 
 ## 바로 해 보기
@@ -103,7 +130,7 @@ flowchart LR
 - 10세션 후 지식베이스에 질문 20개를 던져 답변 품질 확인 → 결과는 [사용 문서의 품질 평가](docs/usage.md#품질-평가)
 
 ## 실행 방법
-환경변수 전체 표, API 예시, 품질 평가 수치는 [docs/usage.md](docs/usage.md) 에 있다. 설계 결정은 [docs/decisions.md](docs/decisions.md), 공개 배포는 [docs/deploy.md](docs/deploy.md), 완성 모습은 [docs/vision.md](docs/vision.md).
+환경변수 전체 표, API 예시, 품질 평가 수치는 [docs/usage.md](docs/usage.md) 에 있다. 설계 판단은 [케이스 스터디](docs/case-study.md), 공개 배포는 [docs/deploy-render.md](docs/deploy-render.md), 완성 모습은 [docs/vision.md](docs/vision.md).
 
 ### 요구사항과 설치
 - [uv](https://docs.astral.sh/uv/) 와 Node.js 24(npm 포함)가 필요하다. Python 3.12는 uv가 설치한다. `uv sync` 후 `make web` 으로 화면을 빌드한다(`web/` 에서 `npm ci`·`npm run build`, 최신이면 건너뜀).
@@ -185,13 +212,15 @@ uv run python -m handoff.rbac.cli invite --role manager --leaver default
 
 화면 밝기: 상단 막대·소개의 화면 밝기 버튼을 누를 때마다 기기 설정 → 밝게 → 어둡게 순으로 바뀐다.
 
-화면 공통: 제목·패널 옆 "?" 를 누르면 그 용어·버튼의 뜻이 한두 문장으로 펼쳐진다(Esc·바깥 클릭으로 닫힘, 서버를 부르지 않음). 위치와 문구 원칙은 [docs/frontend/08-help-and-intro.md](docs/frontend/08-help-and-intro.md).
+화면 공통: 제목·패널 옆 "?" 를 누르면 그 용어·버튼의 뜻이 한두 문장으로 펼쳐진다(Esc·바깥 클릭으로 닫힘, 서버를 부르지 않음).
 
 각 화면은 `/auth/me` 로 역할을 확인하고, 로그인 전이면 "초대 링크로 들어와 주세요.", 다른 역할이면 "이 화면을 볼 권한이 없습니다." 를 보여 준다. 퇴사자 id 는 초대 링크에서 온다. 인증을 끈 서버(`HANDOFF_AUTH=off`)에서는 예전처럼 `?leaver=<id>` 로 고른다 (생략 시 `default`).
 
 세션 규칙: 한 세션 15분(`HANDOFF_SESSION_SECONDS`), 마감 판정은 서버가 하고 유예 30초 뒤 답변을 거부한다. 퇴사자당 10회를 넘는 시작은 409로 거부하고, 새 세션을 시작하면 열려 있던 이전 세션은 자동 종료된다. 세션 상태는 SQLite 에 저장돼 서버를 재시작해도 회차·진행 위치·요약이 남는다.
 
 ### 테스트
+단위·E2E 테스트가 있다. API 키 없이 fake 공급자로 돈다.
+
 단위 테스트:
 ```bash
 uv run pytest tests/unit -q
@@ -212,3 +241,6 @@ uv run pytest tests/e2e -q
 - 인증은 초대 링크 하나에 역할 하나·퇴사자 하나다. 계정·SSO·초대 1회용·개별 폐기·여러 퇴사자를 보는 팀장은 없다.
 - 품질 평가는 규칙 기반이며 LLM 심판을 쓰지 않는다. 평가 데이터는 가상 고정 데이터다.
 - 인수인계에 없는 주제의 지어낸 답은 주장 단위 검증으로 qwen 실측 두 회차 모두 0/6 이었다 (검증 전 MVP 는 2/6). 다만 규칙 평가 20문항 기준이고, 검증이 보수적이라 있는 주제도 답하지 않는 경우가 늘었다 (답변 있음 12/20). `HANDOFF_VERIFY_CLAIMS=off` 면 지식베이스 답을 검증 없이 MVP 때처럼 만든다.
+
+## 라이선스
+[MIT](LICENSE)
