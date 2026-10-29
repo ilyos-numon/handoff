@@ -27,6 +27,61 @@ const AXES = [
   { label: "관계자", v: 0.3 },
 ];
 
+// 도입 안내 절의 문구는 README·docs/vision.md·docs/usage.md 에 적힌 동작과 수치만 쓴다.
+const ADOPT = [
+  { who: "관리자", t: "서버를 띄우고 퇴사자를 등록합니다", d: "서버는 인증을 켠 채 뜹니다. 첫 관리자 링크는 명령으로 만들고, 관리 화면에서 퇴사자를 별칭으로 등록합니다. 실명·이메일은 넣지 않습니다." },
+  { who: "관리자", t: "초대 링크를 직접 전달합니다", d: "퇴사자·후임·팀장 링크를 만들어 복사한 뒤 사내 메신저 등으로 직접 건넵니다. 이 서비스는 메일을 보내지 않습니다. 링크는 72시간 안에 열면 되고, 연 브라우저는 7일 동안 로그인 상태가 됩니다." },
+  { who: "팀장", t: "업무 자료를 넣고 꼭 남길 질문을 정합니다", d: "위키·런북·정기 작업·사고 기록 같은 업무 자료를 넣으면 자료로 질문이 만들어집니다. 반드시 남아야 할 내용은 우선 질문으로 지정해 다음 세션 맨 앞에 둡니다." },
+  { who: "퇴사자", t: "매일 15분, 질문에 답합니다", d: "한 세션 15분, 최대 10회입니다. 질문은 담당 시스템·반복 업무·사고 이력·관계자 네 축을 돌며 깊어지고, 세션을 마치면 오늘 요약 3줄이 남습니다." },
+  { who: "후임", t: "기록에 묻고, 없으면 다음 세션에 넘깁니다", d: "답에는 근거 회차와 확실도가 붙습니다. 기록에 없는 질문은 지어내지 않고 퇴사자의 다음 세션으로 넘어갑니다. 쌓인 기록으로 인수인계 문서 5종을 만듭니다." },
+];
+
+const TIMELINE: { when: string; cells: [string, string, string, string] }[] = [
+  {
+    when: "퇴사 통보 직후",
+    cells: [
+      "초대 링크를 열고 첫 세션을 시작합니다.",
+      "입사 전이면 할 일이 없습니다. 링크는 입사에 맞춰 받습니다.",
+      "업무 자료를 넣어 질문을 만들고, 꼭 남길 질문을 우선 질문으로 지정합니다.",
+      "퇴사자를 별칭으로 등록하고 퇴사자·팀장 링크를 만들어 직접 건넵니다.",
+    ],
+  },
+  {
+    when: "퇴사 전 2주 (D-14~D-1)",
+    cells: [
+      "매일 15분 세션에 답합니다(최대 10회). 팀장·후임이 남긴 질문이 먼저 나옵니다.",
+      "입사했다면 기록에 묻습니다. 기록에 없는 질문은 퇴사자의 다음 세션으로 넘어갑니다.",
+      "빈 곳 보기에서 비어 있는 주제를 보고 질문을 더합니다. 내가 남긴 질문의 답을 확인합니다.",
+      "72시간 안에 열지 못한 링크가 있으면 새로 만들어 건넵니다.",
+    ],
+  },
+  {
+    when: "마지막 날",
+    cells: [
+      "남은 세션을 마치고 오늘 요약 3줄을 확인합니다.",
+      "인수인계 문서 탭에서 운영 런북·30일 온보딩 플랜 등을 읽습니다.",
+      "인수인계 문서 5종을 만들고, 아무도 확실히 모르는 영역을 확인합니다.",
+      "후임 링크를 아직 건네지 않았다면 전달합니다.",
+    ],
+  },
+  {
+    when: "후임 첫 달 (D+1~D+30)",
+    cells: [
+      "할 일이 없습니다. 남긴 기록이 대신 답합니다.",
+      "막히면 기록에 묻고 근거·확실도를 봅니다. 기록에 없으면 먼저 물어볼 역할을 알려 줍니다. 장애 훈련으로 대응을 미리 연습합니다.",
+      "조직·업체·시스템이 바뀌면 틀려질 수 있는 지식을 골라 봅니다.",
+      "로그인은 7일 동안 유지됩니다. 끊기면 새 링크를 만들어 줍니다. 링크를 모두 무효로 하려면 서명 키를 바꾸고 서버를 다시 시작합니다.",
+    ],
+  },
+];
+
+const FOR_ROLES = [
+  { role: "퇴사자", rc: "var(--role-leaver)", d: "하루 15분, 화면이 묻는 질문에 답합니다.", to: "/intro/leaver" },
+  { role: "후임", rc: "var(--role-successor)", d: "막히면 기록에 묻고 근거와 함께 답을 받습니다.", to: "/intro/successor" },
+  { role: "팀장", rc: "var(--role-manager)", d: "빈 곳을 보고 꼭 남겨야 할 질문을 남깁니다.", to: "/intro/manager" },
+  { role: "관리자", rc: "var(--role-admin)", d: "퇴사자를 등록하고 초대 링크를 만들어 건넵니다.", to: "/intro/admin" },
+];
+
 export default function IntroPage() {
   const root = useRef<HTMLDivElement>(null);
   const { me, demo } = useApp();
@@ -166,6 +221,7 @@ export default function IntroPage() {
       <header className="intro-nav">
         <Link to="/intro" className="brand"><Logo />Handoff</Link>
         <nav className="row">
+          <a className="btn ghost sm" href="#for-roles">역할별 안내</a>
           {demo?.demo && <a className="btn ghost sm" href="/demo">데모</a>}
           {home && me?.role && <Link className="btn sm" to={ROLE_HOME[me.role]}>{ROLE_LABEL[me.role]} 화면으로</Link>}
         </nav>
@@ -247,7 +303,7 @@ export default function IntroPage() {
           <article className="role-card" style={{ ["--rc" as string]: "var(--role-manager)" }}>
             <span className="role-tag"><i />팀장</span>
             <h3>무엇이 비었는지만 보기</h3>
-            <p>답변 내용은 보이지 않습니다. 네 축별로 얼마나 채워졌는지와 비어 있는 주제, 다음 세션에 나갈 질문만 봅니다.</p>
+            <p>다른 사람의 답변 내용은 보이지 않고, 내가 남긴 질문의 답만 봅니다. 네 축별로 얼마나 채워졌는지와 비어 있는 주제, 다음 세션에 나갈 질문만 봅니다.</p>
             <div className="mock">
               {AXES.map((a) => (
                 <div key={a.label} className="mock-axis"><span className="xs">{a.label}</span><span className="mock-bar"><i style={{ width: `${a.v * 100}%` }} /></span></div>
@@ -309,8 +365,86 @@ export default function IntroPage() {
         <p className="eyebrow">지키는 것</p>
         <div className="principle-grid">
           <div className="principle"><span className="p-no">01</span><h3>사람을 점수 매기지 않습니다</h3><p>깊이 판정은 다음 질문을 고르는 데만 씁니다. 순위도, 채움 비율도 사람에게 보여 주지 않습니다.</p></div>
-          <div className="principle"><span className="p-no">02</span><h3>팀장은 답변을 읽지 않습니다</h3><p>팀장 화면에는 비어 있는 주제와 질문 큐만 있습니다. 퇴사자의 원래 답은 보이지 않습니다.</p></div>
+          <div className="principle"><span className="p-no">02</span><h3>팀장은 다른 사람의 답을 읽지 않습니다</h3><p>팀장 화면에는 비어 있는 주제와 질문 큐가 있습니다. 다른 사람의 답변 내용은 보이지 않고, 내가 남긴 질문의 답만 봅니다.</p></div>
           <div className="principle"><span className="p-no">03</span><h3>모르면 지어내지 않습니다</h3><p>기록에 없는 질문에는 없다고 답하고, 그 질문을 퇴사자에게 돌려보냅니다.</p></div>
+        </div>
+      </section>
+
+      {/* ---------- 도입 안내 (정적, 애니메이션 없음) ---------- */}
+      <section className="intro-sec adopt" id="adopt">
+        <p className="eyebrow">도입 절차</p>
+        <h2>회사에 들이는 법</h2>
+        <p className="ink2 sec-lead">계정을 만들지 않습니다. 관리자가 서버 하나를 띄우고, 사람마다 초대 링크 하나를 건네면 시작됩니다.</p>
+        <ol className="adopt-steps">
+          {ADOPT.map((s, i) => (
+            <li key={s.t}>
+              <span className="p-no">0{i + 1}</span>
+              <span className="adopt-who xs muted">{s.who}</span>
+              <h3>{s.t}</h3>
+              <p>{s.d}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="intro-sec" id="timeline">
+        <p className="eyebrow">일정표</p>
+        <h2>퇴사 전후, 누가 언제 무엇을</h2>
+        <p className="ink2 sec-lead">퇴사 통보부터 후임의 첫 달까지, 역할마다 하는 일입니다.</p>
+        <div className="timeline-wrap">
+          <table className="timeline">
+            <thead>
+              <tr><th scope="col">시점</th><th scope="col">퇴사자</th><th scope="col">후임</th><th scope="col">팀장</th><th scope="col">관리자</th></tr>
+            </thead>
+            <tbody>
+              {TIMELINE.map((r) => (
+                <tr key={r.when}>
+                  <th scope="row">{r.when}</th>
+                  {r.cells.map((c, i) => <td key={i}>{c}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="intro-sec" id="effects">
+        <p className="eyebrow">써 보면</p>
+        <h2>기대 효과</h2>
+        <ul className="effects-list">
+          <li><h3>퇴사자의 마지막 2주가 문서 쓰기에서 대답하기로</h3><p>빈 문서를 채우는 대신 하루 15분, 최대 10회 질문에 답합니다. 꼬리 질문이 “왜”와 “어디가 함정인지”를 끌어냅니다.</p></li>
+          <li><h3>후임은 지어낸 답 대신 “없다”는 답을 받습니다</h3><p>qwen 실측 지식 루프 평가 두 회차 모두 지어낸 답 0건이었습니다. 대신 검증이 보수적이라 최종 회차에서 20문항 중 답한 것은 12개였습니다.</p></li>
+          <li><h3>팀장은 퇴사 전에 빈 곳을 압니다</h3><p>네 축별 진행 상황과 비어 있는 주제를 보고, 그 자리에서 다음 세션 질문을 정합니다. 같은 평가에서 빈 구멍 찾기 재현율은 1.000이었습니다.</p></li>
+          <li><h3>근거가 붙은 인수인계 문서 5종이 남습니다</h3><p>운영 런북·30일 온보딩 플랜·함정 Top10·결정 기록(ADR)·사전 부검. 같은 평가에서 문서의 근거 표시 비율은 1.000이었습니다.</p></li>
+        </ul>
+        <p className="xs muted">수치는 가상 고정 데이터와 규칙 판정으로 잰 결과이며, 실제 회사 데이터로 잰 값이 아닙니다.</p>
+      </section>
+
+      <section className="intro-sec" id="privacy">
+        <p className="eyebrow">선 긋기</p>
+        <h2>하지 않는 것과 개인정보 원칙</h2>
+        <ul className="privacy-list">
+          <li><strong>감시·평가에 쓰지 않습니다.</strong> 답변 깊이는 다음 질문을 고르는 데만 씁니다.</li>
+          <li><strong>팀장은 본인이 남긴 질문의 답만 봅니다.</strong> 다른 사람이 남긴 질문의 답 원문, 세션 요약, 답변별 깊이는 볼 수 없습니다.</li>
+          <li><strong>이메일·전화번호는 가려서 보여 줍니다.</strong> 저장하기 전과 응답하기 직전, 두 번 가립니다.</li>
+          <li><strong>사람 단위 점수·순위가 없습니다.</strong> 빈 곳은 주제와 세션 단위로만 보여 줍니다.</li>
+          <li><strong>코드·시스템을 자동으로 문서화하지 않습니다.</strong> 사람이 답한 내용만 기록이 됩니다.</li>
+          <li><strong>키는 <code>.env</code> 에만 둡니다.</strong> 저장소·로그에 쓰지 않습니다.</li>
+        </ul>
+        <p className="xs muted">계정·비밀번호·이름·이메일을 받지 않고 퇴사자는 별칭으로 등록합니다. qwen 공급자를 쓰면 답변 원문이 외부 API 로 나갑니다.</p>
+      </section>
+
+      <section className="intro-sec" id="for-roles">
+        <p className="eyebrow">네 역할</p>
+        <h2>역할별 안내</h2>
+        <div className="for-roles-grid">
+          {FOR_ROLES.map((r) => (
+            <article key={r.to} className="for-role" style={{ ["--rc" as string]: r.rc }}>
+              <span className="role-tag"><i />{r.role}</span>
+              <p>{r.d}</p>
+              <Link className="btn ghost sm" to={r.to}>{r.role} 안내 보기</Link>
+            </article>
+          ))}
         </div>
       </section>
 

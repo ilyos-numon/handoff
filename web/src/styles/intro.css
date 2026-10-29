@@ -135,3 +135,30 @@
 .outro-baton { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
 .outro .hero-cta { justify-content: center; }
 .foot { margin-top: 72px; }
+
+/* ---------- 도입 안내 (정적 절) ---------- */
+.intro-sec { max-width: 1180px; margin: 0 auto; padding-top: 12vh !important; padding-bottom: 4vh !important; display: flex; flex-direction: column; gap: 16px; }
+.sec-lead { max-width: 60ch; }
+.adopt-steps { list-style: none; padding: 0; margin: 16px 0 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.adopt-steps li { background: var(--surface); padding: 24px 20px 28px; display: flex; flex-direction: column; gap: 8px; }
+.adopt-steps p { color: var(--ink-2); font-size: 0.9rem; }
+.timeline-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); margin-top: 8px; }
+.timeline { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 0.88rem; }
+.timeline th, .timeline td { text-align: left; vertical-align: top; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.timeline thead th { font-size: 0.8rem; color: var(--muted); background: var(--surface-2); }
+.timeline tbody th { font-weight: 700; width: 140px; }
+.timeline td { color: var(--ink-2); }
+.timeline tbody tr:last-child > * { border-bottom: 0; }
+.effects-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px 32px; }
+.effects-list li { border-top: 1px solid var(--ink); padding-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.effects-list p { color: var(--ink-2); font-size: 0.92rem; }
+.privacy-list { padding-left: 1.2em; margin: 8px 0 0; display: flex; flex-direction: column; gap: 10px; color: var(--ink-2); max-width: 72ch; }
+.privacy-list strong { color: var(--ink); }
+.for-roles-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 8px; }
+.for-role { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--rc); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.for-role p { color: var(--ink-2); font-size: 0.9rem; flex: 1; }
+@media (max-width: 899px) {
+  .adopt-steps, .effects-list { grid-template-columns: 1fr; }
+  .for-roles-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) { .for-roles-grid { grid-template-columns: 1fr; } }
