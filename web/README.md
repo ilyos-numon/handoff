@@ -1,6 +1,6 @@
 # Handoff 웹 프론트엔드
 
-React + Vite + TypeScript. 백엔드 연동 규칙은 `../docs/frontend/` 를 그대로 따른다.
+React + Vite + TypeScript. 백엔드 연동 규칙: 모든 API 호출은 `lib/api.ts` 한 곳을 거치고, 요청마다 `/auth/me` 의 퇴사자 id 를 명시하며, 팀장 화면에는 본인이 남긴 우선 질문의 답 말고는 퇴사자 답 원문을 그리지 않는다. 데모에서는 같은 쿠키로 `X-Handoff-As` 헤더가 역할을 고른다.
 
 ## 실행
 
@@ -48,15 +48,17 @@ npm run build            # dist/
 ```
 src/
   lib/api.ts        fetch 래퍼(오류 형식 4종, 데모 X-Handoff-As, 팀장용 at-risk 원문 제거) + 엔드포인트
-  lib/types.ts      06 데이터 모델 사전
+  lib/types.ts      API 데이터 모델 타입
   lib/labels.ts     열거형 → 화면 문구
   lib/app.tsx       /auth/me + /demo/status 한 번 읽어 공유
-  components/RoleGate.tsx   01 §3.5 시작 순서(역할 확인·leaver 결정)
+  components/RoleGate.tsx   시작 순서(역할 확인·leaver 결정)
   pages/            화면별
   styles/           tokens.css(색), global.css, intro.css
 ```
 
-## 백엔드 이상에 대한 프론트 우회 (docs/frontend/07)
+## 백엔드 이상에 대한 프론트 우회
+
+프론트를 만들며 실제 호출로 찾은 백엔드 동작 중 화면이 따로 대비해야 하는 것과 그 우회 위치다. 번호는 작업 당시 이상 목록의 번호이고, "서버 해결됨" 표시가 있는 것은 서버를 고친 뒤에도 프론트 방어를 남겨 둔 항목이다.
 
 | # | 우회 위치 |
 |---|---|

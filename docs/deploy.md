@@ -30,7 +30,7 @@ bash scripts/deploy-hf.sh --dry-run out/hf-dry
 
 - `git ls-files` 기준으로 `Dockerfile`, `.dockerignore`, `pyproject.toml`, `uv.lock`, `README.md`, `src/` 만 모은다. 커밋 전 새 파일도 `.gitignore` 대상이 아니면 포함한다.
 - `README.md` 는 저장소 README 대신 Space 카드(`deploy/hf/README.md`)로 바뀐다.
-- `.env`, `data/`, `.ai/`, 테스트·문서는 포함되지 않는다. 녹화본 `src/handoff/demo/cassette.json` 은 포함된다.
+- `.env`, `data/`, 테스트·문서는 포함되지 않는다. 녹화본 `src/handoff/demo/cassette.json` 은 포함된다.
 
 확인했으면 업로드한다. 업로드는 `uvx --from huggingface_hub hf upload` 를 쓰므로 프로젝트 의존성을 늘리지 않는다.
 

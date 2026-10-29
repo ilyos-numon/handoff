@@ -1,7 +1,7 @@
 # 핸드오프 (Handoff) — 완성된 모습
 
 > 이 문서는 "어떻게 만들까"가 아니라 "다 만들어졌을 때 사용자가 무엇을 보고 겪는가"를 적는다.
-> 내부 구조는 나중에 docs/system-overview.md 와 docs/decisions.md 에서 다룬다.
+> 설계 판단은 [docs/case-study.md](case-study.md) 에서 다룬다.
 
 ## 한 문장
 
