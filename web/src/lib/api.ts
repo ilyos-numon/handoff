@@ -1,7 +1,7 @@
 import type {
   AnswerResponse, ArtifactKind, AskResponse, AtRiskReport, Artifact, CardType, Certainty, ChangeEvent, CoverageReport,
   DemoRole, DemoStart, DemoStatus, DrillFeedback, DrillScenario, EndSessionResponse, Entity, FenceResponse,
-  GapReport, GenerateResponse, InviteResponse, KnowledgeCard, LeaverRecord, ManagerSafeCard, Me, QueueItem,
+  GapReport, GenerateResponse, InviteResponse, KnowledgeCard, LeaverRecord, ManagerSafeCard, Me, QuestionThread, QueueItem,
   QueueSource, QueueStatus, SessionState, Source, SourceKind, StartSessionResponse, Axis,
 } from "./types";
 import { DEMO_ROLES, JOB_ROLE } from "./labels";
@@ -133,6 +133,7 @@ export const Api = {
   atRiskForManager: async (leaver: string, event: ChangeEvent, target?: string) =>
     stripForManager(await request<AtRiskReport>("GET", `${L(leaver)}/cards/at-risk${qs({ event, target })}`)),
   successorQuestions: (leaver: string) => request<QueueItem[]>("GET", `${L(leaver)}/successor-questions`),
+  questionThread: (leaver: string, qid: string) => request<QuestionThread>("GET", `${L(leaver)}/questions/${qid}/thread`),
   newDrill: (leaver: string, seed_card_id?: string) =>
     request<DrillScenario>("POST", `${L(leaver)}/drills`, seed_card_id ? { seed_card_id } : {}),
   drill: (id: string) => request<DrillScenario>("GET", `/drills/${enc(id)}`),

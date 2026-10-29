@@ -1,5 +1,5 @@
 import type {
-  ArtifactKind, Axis, CardType, Certainty, ChangeEvent, DemoRole, GapKind, QueueSource, QueueStatus, Risk, Role, SourceKind,
+  ArtifactKind, Axis, CardType, Certainty, ChangeEvent, DemoRole, GapKind, QueueSource, QueueStatus, Risk, Role, SourceKind, ThreadState,
 } from "./types";
 
 // 06 §3 열거형 → 화면 문구.
@@ -30,6 +30,12 @@ export const STATUS_SUCCESSOR_LABEL: Record<QueueStatus, string> = {
   asked: "퇴사자 세션에서 질문 중",
   answered: "답변됨",
 };
+export const THREAD_STATE_NOTE: Record<Exclude<ThreadState, "answered">, string> = {
+  waiting: "다음 세션에서 물어볼 예정이에요",
+  asking: "퇴사자 세션에서 묻고 있어요",
+  answered_open: "퇴사자가 답했어요. 세션이 끝나면 여기에 보여요",
+};
+export const ANSWERED_BADGE = "답이 왔어요";
 export const CERTAINTY_LABEL: Record<Certainty, string> = {
   certain: "근거 확실", uncertain: "근거 불확실 · 퇴사자 확인 권장",
 };

@@ -246,6 +246,15 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .status i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
 .status.s-asked i { background: var(--warm); }
 .status.s-answered i { background: var(--accent); }
+.thread { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.thread-turns { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.bubble { display: flex; flex-direction: column; gap: 4px; max-width: min(85%, 560px); min-width: 0; padding: 10px 14px; font-size: 0.93rem; animation: fadeIn .35s var(--ease) both; }
+.bubble p { color: var(--ink); overflow-wrap: anywhere; }
+.bubble.asker { align-self: flex-end; background: var(--surface-2); border-radius: 12px 12px 4px 12px; }
+.bubble.leaver { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: 12px 12px 12px 4px; }
+.bubble-head { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+.bubble p.bubble-follow { font-size: 0.85rem; color: var(--ink-2); }
+.thread-note { align-self: center; text-align: center; font-size: 0.85rem; color: var(--muted); padding: 4px 8px; }
 .docs { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
 .docs-nav { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 72px; }
 .docs-link { display: flex; flex-direction: column; align-items: flex-start; text-align: left; border: 0; background: transparent; padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--ink-2); }

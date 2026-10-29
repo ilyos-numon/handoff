@@ -41,6 +41,13 @@ export interface QueueItem {
   asked_session_id: string | null; answered_session_id: string | null; created_at: string;
 }
 
+export type ThreadState = "waiting" | "asking" | "answered_open" | "answered";
+export interface ThreadTurn {
+  question_id: string; follow_up: boolean; question: string; answer: string;
+  session_number: number | null; created_at: string;
+}
+export interface QuestionThread { item: QueueItem; state: ThreadState; turns: ThreadTurn[] }
+
 export interface Evidence { session_id: string; question_id: string; session_number: number | null; excerpt: string }
 export interface InvalidationCondition { event: ChangeEvent; condition: string }
 export interface KnowledgeCard {
