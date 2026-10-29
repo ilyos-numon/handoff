@@ -14,7 +14,11 @@ from handoff.contracts import (
     AskRoute,
     Citation,
     ClaimVerdict,
+    KBEntry,
+    QuestionThread,
     QueueItem,
+    ThreadState,
+    ThreadTurn,
     VerifyOutcome,
     split_sentences,
     topic_id,
@@ -133,12 +137,49 @@ class SuccessorService:
                     session_number=e.session_number,
                     created_at=e.created_at,
                 )
-                for e in self._sessions.leaver_answers(leaver, item.role, ended_only=True)
-                if topic_id(e.question_id) == item.id
+                for e in self._ended_answers(leaver, item)
             ]
             if cits:
                 return item, cits
         return items[0], []
+
+    def _ended_answers(self, leaver: str, item: QueueItem) -> list[KBEntry]:
+        """Ended-session answers (main and follow-ups) of the leaver to queue item ``item``."""
+        if self._sessions is None:
+            return []
+        return [
+            e
+            for e in self._sessions.leaver_answers(leaver, item.role, ended_only=True)
+            if topic_id(e.question_id) == item.id
+        ]
+
+    def thread(self, leaver: str, qid: str) -> QuestionThread | None:
+        """Question and the leaver's ended answers to it; None when missing or another leaver's."""
+        item = self._store.get_queue_item(qid)
+        if item is None or item.leaver != leaver:
+            return None
+        # answers table text is not scrubbed; the thread shows full text, contacts masked
+        turns = [
+            ThreadTurn(
+                question_id=e.question_id,
+                follow_up=e.question_id != item.id,
+                question=scrub_contacts(e.question),
+                answer=scrub_contacts(e.answer),
+                session_number=e.session_number,
+                created_at=e.created_at,
+            )
+            for e in self._ended_answers(leaver, item)
+        ]
+        state: ThreadState
+        if turns:
+            state = "answered"
+        elif item.status == "answered":
+            state = "answered_open"
+        elif item.status == "asked":
+            state = "asking"
+        else:
+            state = "waiting"
+        return QuestionThread(item=item, state=state, turns=turns)
 
     def ask(self, kb: KnowledgeBase, req: AskRequest, role: str = DEFAULT_ROLE) -> AskResponse:
         answered, linked = self.linked_citations(req.leaver, req.question)

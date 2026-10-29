@@ -152,6 +152,7 @@ NO_CARDS = "no cards"
 CARD_NOT_FOUND = "card not found"
 DRILL_NOT_FOUND = "drill not found"
 ARTIFACT_NOT_FOUND = "artifact not found"
+QUESTION_NOT_FOUND = "question not found"
 PROVIDER_UNAVAILABLE = "provider unavailable"
 
 
@@ -227,6 +228,24 @@ class QueueItem(BaseModel):
     asked_session_id: str | None = None
     answered_session_id: str | None = None
     created_at: datetime
+
+
+ThreadState = Literal["waiting", "asking", "answered_open", "answered"]
+
+
+class ThreadTurn(BaseModel):
+    question_id: str  # "q<n>" 또는 꼬리 "q<n>-s<k>"
+    follow_up: bool  # question_id != item.id
+    question: str  # answers.question, scrub_contacts 적용
+    answer: str  # answers.answer, scrub_contacts 적용 (자르지 않음)
+    session_number: int | None
+    created_at: datetime
+
+
+class QuestionThread(BaseModel):
+    item: QueueItem
+    state: ThreadState
+    turns: list[ThreadTurn]  # 저장 순서(answers.id ASC)
 
 
 class PriorityQuestionRequest(BaseModel):
