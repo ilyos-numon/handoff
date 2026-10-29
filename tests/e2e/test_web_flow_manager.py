@@ -67,8 +67,10 @@ def test_manager_led_handoff_with_roles(
 
     # manager: mock sources and a priority question
     expect(mgr.get_by_role("heading", name="무엇이 아직 안 넘어왔나")).to_be_visible()
+    mgr.get_by_role("tab", name="자료와 문서", exact=True).click()
     mgr.get_by_role("button", name="모의 자료 불러오기").click()
     expect(mgr.get_by_text(re.compile(r"모의 자료 \d+건을 넣었습니다"))).to_be_visible()
+    mgr.get_by_role("tab", name="질문 남기기", exact=True).click()
     mgr.get_by_label("우선 질문").fill(PRIORITY_Q)
     mgr.get_by_role("button", name="큐에 넣기").click()
     expect(mgr.get_by_text("우선 질문을 큐 맨 앞에 넣었습니다.")).to_be_visible()
@@ -94,9 +96,11 @@ def test_manager_led_handoff_with_roles(
     # manager: coverage reflects session 1, gaps, runbook
     mgr.reload()
     expect(mgr.get_by_role("heading", name="무엇이 아직 안 넘어왔나")).to_be_visible()
+    mgr.get_by_role("tab", name="빈 곳 보기", exact=True).click()
     expect(mgr.get_by_text(re.compile(r"세션 1/\d+ 기준"))).to_be_visible()
     mgr.get_by_role("button", name="다시 찾기").click()
     expect(mgr.get_by_text(re.compile(r"빈 구멍 \d+개를 찾았고"))).to_be_visible()
+    mgr.get_by_role("tab", name="자료와 문서", exact=True).click()
     mgr.get_by_role("button", name="만들기", exact=True).first.click()
     expect(mgr.get_by_role("button", name=re.compile(r"운영 런북\s*절 \d+개"))).to_be_enabled()
     shot(mgr, 4, "manager-coverage-gaps-runbook")

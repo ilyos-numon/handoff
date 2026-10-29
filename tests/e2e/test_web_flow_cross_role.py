@@ -173,15 +173,17 @@ def test_cross_role_loop_reaches_successor_and_manager(
     # manager: queue and coverage show it answered, without the answer text
     mgr.goto(f"{url}/report")
     expect(mgr.get_by_role("heading", name="무엇이 아직 안 넘어왔나")).to_be_visible()
+    mgr.get_by_role("tab", name="질문 남기기", exact=True).click()
     mgr.get_by_role("button", name="전체", exact=True).click()
     row = mgr.get_by_role("listitem").filter(has_text=QUESTION)
     expect(row).to_have_count(1)
     expect(row.get_by_text("답변됨")).to_be_visible()
     shot(mgr, "web-x-06-manager-queue")
+    mgr.get_by_role("tab", name="빈 곳 보기", exact=True).click()
     expect(mgr.get_by_text("추가 질문 1개 답함")).to_be_visible()
     shot(mgr, "web-x-07-manager-coverage")
 
-    assert ANSWER_MARK not in mgr.inner_text("body")
+    assert ANSWER_MARK not in mgr.text_content("body")
     assert bodies["coverage"], "no /coverage response captured"
     assert bodies["queue"], "no /queue response captured"
     for key, texts in bodies.items():

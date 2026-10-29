@@ -88,6 +88,7 @@ def _successor_asks(suc: Page) -> None:
 
 def _manager_asks(mgr: Page) -> None:
     expect(mgr.get_by_role("heading", name="무엇이 아직 안 넘어왔나")).to_be_visible()
+    mgr.get_by_role("tab", name="질문 남기기", exact=True).click()
     mgr.get_by_label("우선 질문").fill(M_QUESTION)
     mgr.get_by_role("button", name="큐에 넣기").click()
     expect(mgr.get_by_text("우선 질문을 큐 맨 앞에 넣었습니다.")).to_be_visible()
@@ -265,7 +266,7 @@ def test_manager_never_sees_successor_answer_and_threads_are_scoped(
     thread = mgr.get_by_role("region", name=REGION)
     expect(thread.get_by_text(M_MARK)).to_be_visible()  # the manager's own thread shows the manager's answer
 
-    assert S_MARK not in mgr.inner_text("body")
+    assert S_MARK not in mgr.text_content("body")
     assert bodies, "no manager responses captured"
     for text in bodies:
         assert S_MARK not in text, "a manager-context response leaks the successor's answer"
