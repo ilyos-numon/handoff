@@ -11,9 +11,10 @@ LINKED_DOCS = [
     "docs/demo-video-script.md",
     "docs/usability-test-kit.md",
     "docs/deploy-cloudflare.md",
+    "docs/deploy-render.md",
 ]
 README_FIRST_60 = [
-    "demo.gif", "demo.mp4", "architecture.svg", "YOUR-SUBDOMAIN", "## 핵심 기능", "## 설계 원칙", "make demo",
+    "demo.gif", "demo.mp4", "architecture.svg", "https://handoff-4krf.onrender.com/demo", "## 핵심 기능", "## 설계 원칙", "make demo",
 ]
 PRESERVED_HEADINGS = [
     "## 바로 해 보기", "## 실제 사용 흐름", "## 구조", "## 철학", "## 문제", "## 방향", "## 하지 않는 것",
@@ -68,8 +69,14 @@ def test_readme_first_screen() -> None:
     for needle in README_FIRST_60:
         assert needle in head, needle
     text = _read("README.md")
-    assert text.count("YOUR-SUBDOMAIN") == 1
+    assert text.count("YOUR-SUBDOMAIN") == 0
     assert text.count("<!-- DEMO_URL") == 1
+
+
+def test_render_deploy_doc() -> None:
+    text = _read("docs/deploy-render.md")
+    for needle in ("PORT=7860", "HANDOFF_AUTH_SECRET", "512", "15분"):
+        assert needle in text, needle
 
 
 def test_readme_preserved_headings_and_not_doing_block() -> None:

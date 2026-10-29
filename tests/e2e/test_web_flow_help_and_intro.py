@@ -76,6 +76,12 @@ def _shot(page: Page, shot_dir: Path, name: str, full_page: bool = True) -> None
     page.screenshot(path=str(shot_dir / f"{name}.png"), full_page=full_page)
 
 
+def _at_least(loc: Any, n: int) -> None:
+    """Wait until at least n matches exist (the panel may still be loading), then assert."""
+    loc.nth(n - 1).wait_for(state="attached")
+    assert loc.count() >= n
+
+
 def _help(page: Page, name: str) -> Any:
     return page.get_by_role("button", name=f"{name} 설명", exact=True)
 
@@ -138,14 +144,14 @@ def test_manager_tabs_keep_url_and_fall_back(
     tabs = mgr.get_by_role("tablist").get_by_role("tab")
     expect(tabs).to_have_text(["빈 곳 보기", "질문 남기기", "자료와 문서"])
     expect(mgr.get_by_role("heading", name=STATUS_H, exact=True)).to_be_visible()
-    assert mgr.get_by_role("button", name=re.compile(r" 설명$")).count() >= 4  # status tab (+ page title)
+    _at_least(mgr.get_by_role("button", name=re.compile(r" 설명$")), 4)  # status tab (+ page title)
 
     mgr.get_by_role("tab", name="질문 남기기", exact=True).click()
     expect(mgr).to_have_url(re.compile(r"[?&]tab=ask"))
     expect(mgr.get_by_role("heading", name=ASK_H)).to_be_visible()
     expect(mgr.get_by_role("heading", name=STATUS_H, exact=True)).to_be_hidden()
     ask_panel = mgr.get_by_role("tabpanel", name="질문 남기기")
-    assert ask_panel.get_by_role("button", name=re.compile(r" 설명$")).count() >= 3
+    _at_least(ask_panel.get_by_role("button", name=re.compile(r" 설명$")), 3)
 
     mgr.reload()
     expect(mgr).to_have_url(re.compile(r"[?&]tab=ask"))
@@ -157,7 +163,7 @@ def test_manager_tabs_keep_url_and_fall_back(
     expect(mgr).to_have_url(re.compile(r"[?&]tab=docs"))
     docs_panel = mgr.get_by_role("tabpanel", name="자료와 문서")
     expect(docs_panel).to_be_visible()
-    assert docs_panel.get_by_role("button", name=re.compile(r" 설명$")).count() >= 3
+    _at_least(docs_panel.get_by_role("button", name=re.compile(r" 설명$")), 3)
     _shot(mgr, shot_dir, "hi-05-manager-docs")
 
     mgr.goto(f"{url}/report?tab=zzz")
