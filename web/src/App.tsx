@@ -10,6 +10,7 @@ import { NotFound } from "./pages/NotFound";
 
 // GSAP 은 소개 페이지에서만 쓴다 → 따로 나눠 불러온다.
 const IntroPage = lazy(() => import("./pages/Intro"));
+const RoleIntroPage = lazy(() => import("./pages/RoleIntro"));
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
       <AppProvider>
         <Routes>
           <Route path="/intro" element={<Suspense fallback={null}><IntroPage /></Suspense>} />
+          <Route path="/intro/:role" element={<Suspense fallback={null}><RoleIntroPage /></Suspense>} />
           <Route path="/" element={<LeaverPage />} />
           <Route path="/chat" element={<SuccessorPage />} />
           <Route path="/report" element={<ManagerPage />} />

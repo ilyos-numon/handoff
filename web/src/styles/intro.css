@@ -162,3 +162,25 @@
   .for-roles-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 480px) { .for-roles-grid { grid-template-columns: 1fr; } }
+
+/* ---------- 역할 소개 /intro/<role> (정적) ---------- */
+.role-intro { padding-bottom: 10vh; }
+.role-intro .intro-sec { max-width: 860px; padding-top: 6vh !important; padding-bottom: 0 !important; }
+.role-intro .role-intro-head { padding-top: 120px !important; }
+.role-intro-title { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.15; letter-spacing: -0.045em; font-weight: 800; }
+.role-intro .hero-cta { margin-top: 8px; }
+.role-intro-list { padding-left: 1.2em; margin: 0; display: flex; flex-direction: column; gap: 8px; color: var(--ink-2); }
+.role-intro-steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.role-intro-steps li { background: var(--surface); padding: 18px 20px; display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: baseline; }
+.role-intro-steps p { color: var(--ink-2); font-size: 0.95rem; }
+.role-intro-steps strong { color: var(--ink); }
+.role-intro-see { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.role-intro-see > div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.role-intro-see > div:first-child { border-top: 3px solid var(--rc); }
+.role-intro-faq { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.role-intro-faq details { border-bottom: 1px solid var(--line); padding: 14px 0; }
+.role-intro-faq summary { cursor: pointer; font-weight: 650; }
+.role-intro-faq details p { margin-top: 8px; color: var(--ink-2); font-size: 0.93rem; }
+.role-intro-more { gap: 10px !important; }
+.role-intro-links { flex-wrap: wrap; }
+@media (max-width: 640px) { .role-intro-see { grid-template-columns: 1fr; } }

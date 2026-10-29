@@ -21,6 +21,7 @@ export function Shell({ role, title, right, narrow, children }:
           {title && <span className="shell-title">{title}</span>}
           <span className="grow" />
           {right}
+          {role && !IN_FRAME && <Link className="btn ghost sm" to={`/intro/${role}`}>이 화면 안내</Link>}
           {role && (
             <span className="role-chip" style={{ ["--role-c" as string]: `var(--role-${role})` }}>
               <i />{ROLE_LABEL[role]}
