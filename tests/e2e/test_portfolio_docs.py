@@ -12,6 +12,11 @@ LINKED_DOCS = [
     "docs/usability-test-kit.md",
     "docs/deploy-cloudflare.md",
     "docs/deploy-render.md",
+    "docs/vision.md",
+    "docs/deploy.md",
+    "docs/usage.md",
+    "docs/demo-scenario.md",
+    "web/README.md",
 ]
 README_FIRST_60 = [
     "demo.gif", "demo.mp4", "architecture.svg", "https://handoff-4krf.onrender.com/demo", "## 핵심 기능", "## 설계 원칙", "make demo",
