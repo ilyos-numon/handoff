@@ -26,7 +26,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://handoff-4krf.onrender.com/intro
 - `/demo` 200, 브라우저로 열면 세 역할 화면 iframe 3개 (화면은 브라우저에서 그려지므로 curl 로는 셀 수 없다)
 - `/intro` 200, 없는 역할 `/intro/ceo` 404
 
-공개 주소를 실제로 여는 E2E 는 환경변수 `HANDOFF_LIVE_URL` 이 있을 때만 돈다: `HANDOFF_LIVE_URL=https://handoff-4krf.onrender.com uv run pytest tests/e2e/test_live_demo.py -q`.
+공개 주소를 실제로 여는 E2E 는 환경변수 `HANDOFF_LIVE_URL` 이 있을 때만 돈다: `HANDOFF_LIVE_URL=https://handoff-4krf.onrender.com uv run pytest tests/e2e/live_demo_check.py -q`.
 
 ## 주의
 
