@@ -28,7 +28,7 @@ DATA_DIR = VIDEO_DIR / "data"
 MEDIA_DIR = ROOT / "docs" / "media"
 FFMPEG = "/opt/homebrew/bin/ffmpeg"
 FFPROBE = "/opt/homebrew/bin/ffprobe"
-LOG_DIR = ROOT / ".ai" / "tasks" / "T-20261029-public-release" / "logs"
+LOG_DIR = ROOT / "out" / "demo-video"
 
 MP4_LIMIT = 4194304
 GIF_LIMIT = 5242880
@@ -246,7 +246,7 @@ def record(port: int) -> Path:
     )
     print(line, flush=True)
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    (LOG_DIR / "s4-llm-stats.log").write_text(line + "\n" + json.dumps(llm) + "\n")
+    (LOG_DIR / "llm-stats.log").write_text(line + "\n" + json.dumps(llm) + "\n")
     videos = sorted(VIDEO_DIR.glob("*.webm"), key=lambda p: p.stat().st_mtime)
     return videos[-1]
 

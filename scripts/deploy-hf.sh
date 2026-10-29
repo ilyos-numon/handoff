@@ -8,7 +8,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CARD="$ROOT/deploy/hf/README.md"
 MARKER=".deploy-hf-staging"
-# Dockerfile 이 쓰는 것만 올린다. .env·data·.ai 는 대상이 아니다.
+# Dockerfile 이 쓰는 것만 올린다. .env·data·로컬 작업 파일은 대상이 아니다.
 INCLUDE=(Dockerfile .dockerignore pyproject.toml uv.lock README.md src)
 
 usage() {

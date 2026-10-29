@@ -57,7 +57,7 @@ tests/e2e/screenshots/pd-*.png
 .wrangler/
 deploy/cloudflare/worker-configuration.d.ts
 
-# 공개 저장소 밖 (로컬 전용: 에이전트 기록·계획·설정·내부 메모)
+# 공개 저장소 밖 (로컬 전용 작업 파일)
 /.ai/
 /.claude/
 /.impeccable/

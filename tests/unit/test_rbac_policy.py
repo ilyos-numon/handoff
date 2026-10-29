@@ -30,7 +30,7 @@ from handoff.rbac.tokens import (
 
 ALL = ("anonymous", "leaver", "successor", "manager")
 
-# PLAN §4.4: (method, template, scope, roles allowed). Public rows allow everyone.
+# Role policy table: (method, template, scope, roles allowed). Public rows allow everyone.
 TABLE: list[tuple[str, str, str, frozenset[str]]] = [
     ("GET", "/health", "public", frozenset(ALL)),
     ("GET", "/", "public", frozenset(ALL)),

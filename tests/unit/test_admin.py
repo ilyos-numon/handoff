@@ -1,4 +1,4 @@
-"""Leaver registry and the admin invite API (PLAN §4.5)."""
+"""Leaver registry and the admin invite API (leaver records and invite links)."""
 
 import re
 from collections.abc import Iterator

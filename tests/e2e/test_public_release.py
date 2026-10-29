@@ -9,18 +9,31 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-REMOVED = [
-    ".ai/*",
-    ".claude/*",
-    ".impeccable/*",
-    "CLAUDE.md",
-    "openspec/*",
-    "docs/frontend/*",
-    "docs/decisions.md",
-    "tests/e2e/screenshots/*.png",
-]
+LOCAL_ONLY_MARKER = "# 공개 저장소 밖"
 KEEP = {"tests/e2e/screenshots/.gitkeep"}
-FORBIDDEN = ["docs/decisions.md", "docs/frontend/", "decisions.md", "openspec/", ".ai/", "CLAUDE.md", ".impeccable"]
+
+
+def _local_only_entries() -> list[str]:
+    """Path lines of the local-only block in .gitignore (marker comment until blank line)."""
+    lines = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+    start = next(i for i, ln in enumerate(lines) if ln.startswith(LOCAL_ONLY_MARKER))
+    entries: list[str] = []
+    for ln in lines[start + 1:]:
+        if not ln.strip():
+            break
+        if not ln.startswith("#"):
+            entries.append(ln.strip().lstrip("/"))
+    return entries
+
+
+LOCAL_ONLY = _local_only_entries()
+# Tracked-file patterns: directories become "dir/*", files and globs stay as written.
+REMOVED = [e + "*" if e.endswith("/") else e for e in LOCAL_ONLY]
+# Text needles: non-glob entries, plus bare file names (e.g. a moved copy of a local-only file).
+FORBIDDEN = sorted(
+    {e for e in LOCAL_ONLY if "*" not in e}
+    | {Path(e).name for e in LOCAL_ONLY if "*" not in e and not e.endswith("/")}
+)
 SCAN_SUFFIXES = (".md", ".py", ".ts", ".tsx", ".html", ".yml", ".toml")
 SCAN_EXCLUDE = {".gitignore", ".dockerignore", "tests/e2e/test_public_release.py"}
 GALLERY = [

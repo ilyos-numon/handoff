@@ -16,7 +16,7 @@ from handoff.rbac.tokens import Principal, Role, issue_invite
 SECRET = "t"
 BUILTIN_PATHS = {"/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"}
 
-# PLAN §4.4: (method, template) -> roles allowed among leaver(L), successor(S), manager(M),
+# Role policy table: (method, template) -> roles allowed among leaver(L), successor(S), manager(M),
 # admin(A). Public rows allow every role, admin included (admin inherits anonymous).
 ALL = "LSM"
 PUB = "LSMA"
