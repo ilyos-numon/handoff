@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { HelpTip } from "../components/HelpTip";
 import { RoleGate } from "../components/RoleGate";
 import { Button, ErrorNote, Skeleton, Thinking } from "../components/ui";
 import { Api, ApiError, userMessage } from "../lib/api";
@@ -222,6 +223,7 @@ function LeaverSession({ leaver }: { leaver: string }) {
           <Button variant="primary" size="lg" busy={starting} onClick={start}>
             {phase.summary ? "다음 세션 시작" : "세션 시작"}
           </Button>
+          <HelpTip k="leaver.start" />
           {phase.summary && <span className="small muted">내일 이어서 하셔도 됩니다.</span>}
         </div>
       </div>
@@ -239,16 +241,24 @@ function LeaverSession({ leaver }: { leaver: string }) {
           <div className="axis-dots" aria-label={q ? `지금 축: ${AXIS_LABEL[q.axis]}` : undefined}>
             {AXES.map((a) => <span key={a} className={q?.axis === a ? "on" : ""} title={AXIS_LABEL[a]}>{AXIS_LABEL[a]}</span>)}
           </div>
+          <HelpTip k="leaver.axes" />
         </div>
-        <span className={`timer num${low ? " low" : ""}`} aria-live="off">{clock(remaining)} 남음</span>
+        <div className="row">
+          <span className={`timer num${low ? " low" : ""}`} aria-live="off">{clock(remaining)} 남음</span>
+          <HelpTip k="leaver.timer" />
+        </div>
       </div>
       <div className="progress-line"><i style={{ transform: `scaleX(${Math.min(1, remaining / 900)})` }} /></div>
 
       <div className="transcript" aria-live="polite">
         {turns.map((t, i) => t.who === "q" ? (
           <div key={i} className={`turn q${i === turns.length - 1 ? " current" : ""}`}>
-            {t.q?.kind === "queued" && t.q.source && <span className="badge warm">{SOURCE_LEAVER_LABEL[t.q.source]}</span>}
-            {t.q?.kind === "follow_up" && <span className="xs muted">이어서</span>}
+            {t.q?.kind === "queued" && t.q.source && (
+              <div className="row"><span className="badge warm">{SOURCE_LEAVER_LABEL[t.q.source]}</span><HelpTip k="leaver.source" /></div>
+            )}
+            {t.q?.kind === "follow_up" && (
+              <div className="row"><span className="xs muted">이어서</span><HelpTip k="leaver.followup" /></div>
+            )}
             <p className="pre">{t.text}</p>
           </div>
         ) : (
@@ -268,6 +278,7 @@ function LeaverSession({ leaver }: { leaver: string }) {
             <Button variant="ghost" onClick={() => end()} busy={ending} disabled={sending}>
               {ending ? "정리 중" : "오늘은 여기까지"}
             </Button>
+            <HelpTip k="leaver.close" />
             <Button variant="primary" onClick={() => send()} busy={sending} disabled={!draft.trim() || ending || !q}>
               보내기 <span className="kbd">⌘↵</span>
             </Button>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CardRefs } from "../../components/CardRefs";
+import { HelpTip } from "../../components/HelpTip";
 import { Button, CertaintyBadge, ErrorNote, Thinking } from "../../components/ui";
 import { Api, ApiError } from "../../lib/api";
 import { useApp } from "../../lib/app";
@@ -91,9 +92,12 @@ function AnswerView({ res, cards }: { res: AskResponse; cards: Record<string, Kn
   }
   return (
     <div className="answer">
-      <div className="row"><CertaintyBadge value={res.certainty} /></div>
+      <div className="row"><CertaintyBadge value={res.certainty} /><HelpTip k="successor.certainty" /></div>
       <p className="pre">{a.answer}</p>
       {a.claims_removed > 0 && <p className="xs muted">근거로 확인되지 않은 문장 {a.claims_removed}개를 뺐습니다.</p>}
+      {a.citations.length > 0 && (
+        <div className="row"><span className="xs muted">근거</span><HelpTip k="successor.citation" /></div>
+      )}
       {a.citations.length > 0 && (
         <ol className="citations">
           {a.citations.map((c, i) => (

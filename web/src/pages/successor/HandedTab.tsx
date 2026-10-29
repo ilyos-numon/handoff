@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HelpTip } from "../../components/HelpTip";
 import { QuestionThreadView } from "../../components/QuestionThread";
 import { Button, Empty, ErrorNote, Skeleton } from "../../components/ui";
 import { Api } from "../../lib/api";
@@ -23,7 +24,7 @@ export function HandedTab({ leaver }: { leaver: string }) {
   return (
     <div className="panel">
       <div className="panel-head">
-        <div><h2>퇴사자에게 넘긴 질문</h2><p>질문을 누르면 퇴사자 답을 볼 수 있어요.</p></div>
+        <div><div className="panel-title"><h2>퇴사자에게 넘긴 질문</h2><HelpTip k="successor.handed" /></div><p>질문을 누르면 퇴사자 답을 볼 수 있어요.</p></div>
         <Button size="sm" variant="ghost" onClick={reload} busy={loading}>새로 고침</Button>
       </div>
       <ErrorNote error={error} retry={reload} />

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { HelpTip } from "../components/HelpTip";
 import { Blocked, RoleGate } from "../components/RoleGate";
 import { Button, Empty, ErrorNote, Panel, Skeleton } from "../components/ui";
 import { Api } from "../lib/api";
@@ -33,7 +34,7 @@ function Admin() {
         <h1>퇴사자 등록과 초대 링크</h1>
         <p>링크는 메일로 나가지 않습니다. 복사해서 직접 전달해 주세요. 링크는 비밀번호와 같습니다.</p>
       </div>
-      <Panel title="퇴사자 등록">
+      <Panel title="퇴사자 등록" help="admin.register">
         <form className="stack" onSubmit={submit} style={{ ["--gap" as string]: "8px" }}>
           <div className="row">
             <input className="input grow" value={alias} maxLength={30} onChange={(e) => setAlias(e.target.value)}
@@ -45,7 +46,7 @@ function Admin() {
           {create.error && create.error.status !== 422 && <ErrorNote error={create.error} />}
         </form>
       </Panel>
-      <Panel title="등록된 퇴사자" desc={list.data ? `${list.data.length}명` : undefined}>
+      <Panel title="등록된 퇴사자" help="admin.list" desc={list.data ? `${list.data.length}명` : undefined}>
         <ErrorNote error={list.error} retry={list.reload} />
         {list.loading && !list.data ? <Skeleton /> : list.data?.length === 0 ? <Empty>아직 등록한 퇴사자가 없습니다.</Empty> : (
           <ul className="list">{list.data?.map((l) => <LeaverRow key={l.leaver} rec={l} onMissing={list.reload} />)}</ul>
@@ -84,6 +85,7 @@ function LeaverRow({ rec, onMissing }: { rec: LeaverRecord; onMissing: () => voi
         {INVITE_ROLES.map((r) => (
           <Button key={r} size="sm" busy={busy === r} onClick={() => make(r)}>{ROLE_LABEL[r]} 링크</Button>
         ))}
+        <HelpTip k="admin.invite" />
       </div>
       {denied === 403 && <p className="note error small" role="alert">이 브라우저는 지금 다른 역할로 들어와 있습니다. 관리자 링크로 다시 들어와 주세요.</p>}
       {denied === 401 && <p className="note error small" role="alert">관리자 링크로 다시 들어와 주세요.</p>}
