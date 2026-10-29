@@ -28,8 +28,6 @@ function Successor({ leaver }: { leaver: string }) {
   }, [leaver]);
   useEffect(() => { void loadCards(); }, [loadCards]);
 
-  const reask = (q: string) => { setAskSeed(q); setTab("ask"); };
-
   return (
     <>
       <div className="page-head">
@@ -46,7 +44,7 @@ function Successor({ leaver }: { leaver: string }) {
       ]} />
       <div hidden={tab !== "ask"}><AskTab leaver={leaver} cards={cards} seed={askSeed} onSeedUsed={() => setAskSeed(null)} onAsked={loadCards} /></div>
       {tab === "fence" && <FenceTab leaver={leaver} />}
-      {tab === "handed" && <HandedTab leaver={leaver} onReask={reask} />}
+      {tab === "handed" && <HandedTab leaver={leaver} />}
       {tab === "docs" && <DocsTab leaver={leaver} cards={cards} />}
       {tab === "cards" && <CardsTab leaver={leaver} />}
       {tab === "drill" && <DrillTab leaver={leaver} cards={cards} />}
