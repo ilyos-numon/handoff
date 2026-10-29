@@ -1,0 +1,18 @@
+{
+  "name": "handoff-cloudflare-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "types": "wrangler types",
+    "dry-run": "wrangler deploy --dry-run --outdir ../../out/cf-dry",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.7"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "^4.155.0"
+  }
+}
