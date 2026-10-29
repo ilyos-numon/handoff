@@ -37,6 +37,8 @@ p, manager, /leavers/{leaver}/priority-questions, POST
 p, successor, /kb/ask, POST
 p, successor, /leavers/{leaver}/successor-questions, GET
 p, manager, /leavers/{leaver}/successor-questions, GET
+p, successor, /leavers/{leaver}/questions/{qid}/thread, GET
+p, manager, /leavers/{leaver}/questions/{qid}/thread, GET
 p, manager, /leavers/{leaver}/artifacts/{kind}, POST
 p, leaver, /leavers/{leaver}/artifacts/{kind}, GET
 p, successor, /leavers/{leaver}/artifacts/{kind}, GET

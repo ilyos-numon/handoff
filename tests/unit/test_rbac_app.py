@@ -53,6 +53,7 @@ POLICY_TABLE: dict[tuple[str, str], str] = {
     ("POST", "/leavers/{leaver}/priority-questions"): "M",
     ("POST", "/kb/ask"): "S",
     ("GET", "/leavers/{leaver}/successor-questions"): "SM",
+    ("GET", "/leavers/{leaver}/questions/{qid}/thread"): "SM",
     ("POST", "/leavers/{leaver}/artifacts/{kind}"): "M",
     ("GET", "/leavers/{leaver}/artifacts/{kind}"): ALL,
     ("POST", "/leavers/{leaver}/drills"): "S",

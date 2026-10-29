@@ -69,6 +69,12 @@ TABLE: list[tuple[str, str, str, frozenset[str]]] = [
         "path",
         frozenset({"successor", "manager"}),
     ),
+    (
+        "GET",
+        "/leavers/{leaver}/questions/{qid}/thread",
+        "path",
+        frozenset({"successor", "manager"}),
+    ),
     ("POST", "/leavers/{leaver}/artifacts/{kind}", "path", frozenset({"manager"})),
     (
         "GET",

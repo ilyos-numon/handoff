@@ -48,6 +48,7 @@ ROUTE_SCOPES: dict[tuple[str, str], Scope] = {
     ("POST", "/leavers/{leaver}/priority-questions"): "path",
     ("POST", "/kb/ask"): "body",
     ("GET", "/leavers/{leaver}/successor-questions"): "path",
+    ("GET", "/leavers/{leaver}/questions/{qid}/thread"): "path",
     ("POST", "/leavers/{leaver}/artifacts/{kind}"): "path",
     ("GET", "/leavers/{leaver}/artifacts/{kind}"): "path",
     ("POST", "/leavers/{leaver}/drills"): "path",
