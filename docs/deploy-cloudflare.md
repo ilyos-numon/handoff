@@ -1,5 +1,7 @@
 # 공개 데모 배포 (Cloudflare Containers)
 
+> 대안(유료: Workers Paid 필요). 현재 공개 데모는 Render 무료([deploy-render.md](deploy-render.md)).
+
 로컬에서는 `make demo` 한 줄이면 된다. 이 문서는 누구나 브라우저로 열 수 있는 공개 데모를 Cloudflare Containers 에 올리는 방법이다. 배포 구성은 `deploy/cloudflare/`(Worker·설정)와 `.github/workflows/deploy-cloudflare.yml`(수동 실행 워크플로)에 있다. Hugging Face Spaces 로 올리는 방법은 대안으로 [deploy.md](deploy.md) 에 남겨 둔다.
 
 ## 왜 Containers 인가

@@ -1,4 +1,4 @@
-> 기본 공개 데모는 Cloudflare Containers 다([deploy-cloudflare.md](deploy-cloudflare.md)). 이 문서(Hugging Face Spaces)는 대안이다.
+> 대안(중단: 계정 무료 실행 한도 0). 현재 공개 데모는 Render 무료([deploy-render.md](deploy-render.md)).
 
 # 공개 데모 배포 (Hugging Face Spaces)
 
