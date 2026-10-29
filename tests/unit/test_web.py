@@ -8,7 +8,7 @@ from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from starlette.routing import Route
 
-from handoff.web import STATIC_DIR, install_web, page, valid_dist
+from handoff.web import INTRO_ROLES, STATIC_DIR, install_web, page, valid_dist
 
 INDEX = "<!doctype html><html><body><div id=root></div></body></html>"
 
@@ -107,3 +107,34 @@ def test_intro_is_plain_route_not_api_route(tmp_path: Path) -> None:
     for route in routes:
         assert isinstance(route, Route)
         assert not isinstance(route, APIRoute)
+
+
+def test_intro_role_serves_index_for_each_role(tmp_path: Path) -> None:
+    app, _ = _app(_dist(tmp_path))
+    client = TestClient(app)
+    assert INTRO_ROLES == ("leaver", "successor", "manager", "admin")
+    for role in INTRO_ROLES:
+        res = client.get(f"/intro/{role}")
+        assert res.status_code == 200
+        assert res.text == INDEX
+        assert res.headers["cache-control"] == "no-cache"
+
+
+def test_intro_unknown_role_is_404_json(tmp_path: Path) -> None:
+    app, _ = _app(_dist(tmp_path))
+    res = TestClient(app).get("/intro/ceo")
+    assert res.status_code == 404
+    assert res.json() == {"detail": "Not Found"}
+
+
+def test_intro_role_without_dist_is_404(tmp_path: Path) -> None:
+    app, _ = _app(None)
+    assert TestClient(app).get("/intro/manager").status_code == 404
+
+
+def test_intro_role_is_plain_route_not_api_route(tmp_path: Path) -> None:
+    app, _ = _app(_dist(tmp_path))
+    routes = [r for r in app.routes if getattr(r, "path", None) == "/intro/{role}"]
+    assert len(routes) == 1
+    assert isinstance(routes[0], Route)
+    assert not isinstance(routes[0], APIRoute)

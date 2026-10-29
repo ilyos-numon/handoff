@@ -3,11 +3,12 @@
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.routing import Route
 
 SCREEN_PATHS: tuple[str, ...] = ("/", "/intro", "/chat", "/report", "/admin", "/demo")
+INTRO_ROLES: tuple[str, ...] = ("leaver", "successor", "manager", "admin")
 
 STATIC_DIR = Path(__file__).parent / "static"
 NO_CACHE = {"Cache-Control": "no-cache"}
@@ -34,6 +35,11 @@ def install_web(app: FastAPI, dist: Path | None) -> Path | None:
     def intro(_request: Request) -> Response:
         return _index(applied)
 
+    def intro_role(request: Request) -> Response:
+        if request.path_params["role"] in INTRO_ROLES:
+            return _index(applied)
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+
     def favicon(_request: Request) -> Response:
         icon = applied / "favicon.svg"
         if not icon.is_file():
@@ -46,6 +52,7 @@ def install_web(app: FastAPI, dist: Path | None) -> Path | None:
         name="web-assets",
     )
     app.router.routes.append(Route("/intro", intro, methods=["GET"]))
+    app.router.routes.append(Route("/intro/{role}", intro_role, methods=["GET"]))
     app.router.routes.append(Route("/favicon.svg", favicon, methods=["GET"]))
     return applied
 
