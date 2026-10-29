@@ -11,7 +11,7 @@ export function RiskPanel({ leaver }: { leaver: string }) {
   const [event, setEvent] = useState<ChangeEvent>("system_replaced");
   const { data, loading, error, reload } = useLoad(() => Api.atRiskForManager(leaver, event), [leaver, event]);
   return (
-    <Panel title="조직이 바뀌면 틀려질 지식" desc="예정된 변화를 고르면 다시 확인해야 할 기록을 보여 줍니다."
+    <Panel title="조직이 바뀌면 틀려질 지식" help="manager.risk" desc="예정된 변화를 고르면 다시 확인해야 할 기록을 보여 줍니다."
       action={
         <select className="select w-auto" value={event} onChange={(e) => setEvent(e.target.value as ChangeEvent)} aria-label="변화">
           {EVENTS.map((ev) => <option key={ev} value={ev}>{EVENT_LABEL[ev]}</option>)}

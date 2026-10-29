@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Empty, ErrorNote, Panel, Skeleton } from "../../components/ui";
+import { HelpTip } from "../../components/HelpTip";
 import { Api } from "../../lib/api";
 import type { useLoad } from "../../lib/hooks";
 import type { CoverageReport, EmptyTopic } from "../../lib/types";
@@ -11,8 +12,8 @@ export function CoveragePanel({ load, leaver, onQueued }: { load: Load; leaver: 
   const [all, setAll] = useState(false);
   const [queued, setQueued] = useState<Record<string, boolean>>({});
 
-  if (loading && !data) return <Panel title="진행 상황"><Skeleton lines={4} /></Panel>;
-  if (!data) return <Panel title="진행 상황"><ErrorNote error={error} retry={reload} /></Panel>;
+  if (loading && !data) return <Panel title="진행 상황" help="manager.coverage"><Skeleton lines={4} /></Panel>;
+  if (!data) return <Panel title="진행 상황" help="manager.coverage"><ErrorNote error={error} retry={reload} /></Panel>;
 
   const ratio = (c: { covered: number; total: number }) => (c.total ? c.covered / c.total : 0);
   const lowest = data.axes.reduce((m, a, i) => (ratio(a) < ratio(data.axes[m]) ? i : m), 0);
@@ -23,7 +24,7 @@ export function CoveragePanel({ load, leaver, onQueued }: { load: Load; leaver: 
   };
 
   return (
-    <Panel title="진행 상황" desc={`세션 ${data.sessions_done}/${data.sessions_planned} 기준 · 전체 ${data.items_total}항목`}>
+    <Panel title="진행 상황" help="manager.coverage" desc={`세션 ${data.sessions_done}/${data.sessions_planned} 기준 · 전체 ${data.items_total}항목`}>
       <div className="axes">
         {data.axes.map((a, i) => (
           <div key={a.axis} className="axis-row">
@@ -42,7 +43,7 @@ export function CoveragePanel({ load, leaver, onQueued }: { load: Load; leaver: 
       <p className="xs muted" style={{ marginTop: 8 }}>퇴사자가 세션을 마감해야 반영됩니다.</p>
       <hr className="divider" />
       <div className="row-between" style={{ marginBottom: 8 }}>
-        <h3>비어 있는 주제 <span className="muted num">{data.empty_topics.length}</span></h3>
+        <div className="panel-title"><h3>비어 있는 주제 <span className="muted num">{data.empty_topics.length}</span></h3><HelpTip k="manager.emptyTopics" /></div>
       </div>
       {data.empty_topics.length === 0 ? <Empty>비어 있는 주제가 없습니다.</Empty> : (
         <ul className="list">

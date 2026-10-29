@@ -22,7 +22,7 @@ export function ArtifactsPanel({ leaver, tick }: { leaver: string; tick: number 
   };
 
   return (
-    <Panel title="인수인계 산출물" desc="퇴사자 답에서 뽑은 카드로 문서를 만듭니다. 후임은 읽기만 합니다.">
+    <Panel title="인수인계 산출물" help="manager.artifacts" desc="퇴사자 답에서 뽑은 카드로 문서를 만듭니다. 후임은 읽기만 합니다.">
       {!map ? <Skeleton /> : (
         <div className="art-grid">
           {ARTIFACT_KINDS.map((k) => (

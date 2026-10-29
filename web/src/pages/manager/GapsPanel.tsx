@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button, Empty, ErrorNote, Panel, Skeleton } from "../../components/ui";
+import { HelpTip } from "../../components/HelpTip";
 import { Api } from "../../lib/api";
 import { useAction, type useLoad } from "../../lib/hooks";
 import { GAP_KIND_LABEL, RISK_LABEL } from "../../lib/labels";
@@ -19,7 +20,7 @@ export function GapsPanel({ load, leaver, onChanged }: { load: Load; leaver: str
   });
 
   return (
-    <Panel title="빈 구멍" desc="자료와 답변을 맞대 보고 기록이 얇은 곳을 찾습니다."
+    <Panel title="빈 구멍" help="manager.gaps" desc="자료와 답변을 맞대 보고 기록이 얇은 곳을 찾습니다."
       action={<Button size="sm" busy={refresh.busy} onClick={() => refresh.run()}>{refresh.busy ? "찾는 중" : "다시 찾기"}</Button>}>
       <ErrorNote error={refresh.error ?? error} />
       {msg && <p className="note accent small fade-in" style={{ marginBottom: 12 }}>{msg}</p>}
@@ -43,7 +44,7 @@ export function GapsPanel({ load, leaver, onChanged }: { load: Load; leaver: str
       {data && data.unknown_areas.length > 0 && (
         <>
           <hr className="divider" />
-          <h3 style={{ marginBottom: 8 }}>아무도 확실히 모르는 영역</h3>
+          <div className="panel-title" style={{ marginBottom: 8 }}><h3>아무도 확실히 모르는 영역</h3><HelpTip k="manager.unknownAreas" /></div>
           <ul className="list">
             {data.unknown_areas.map((u) => (
               <li key={u.topic}><strong className="small">{u.topic}</strong><p className="xs muted">{u.detail}</p></li>

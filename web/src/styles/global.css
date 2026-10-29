@@ -283,10 +283,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 @media (max-width: 760px) { .docs, .drill { grid-template-columns: 1fr; } .docs-nav { position: static; flex-direction: row; overflow-x: auto; } }
 
 /* ---------- 팀장 ---------- */
-.mgr { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
-.mgr-main, .mgr-side { display: flex; flex-direction: column; gap: 16px; }
-.mgr .panel + .panel { margin-top: 0; }
-@media (max-width: 900px) { .mgr { grid-template-columns: 1fr; } }
+.tab-desc { margin: -8px 0 16px; color: var(--ink-2); font-size: 0.9rem; }
+.mgr-pane[hidden] { display: none; }
 .axes { display: flex; flex-direction: column; gap: 14px; }
 .axis-row { display: grid; grid-template-columns: 84px 1fr 48px; gap: 6px 12px; align-items: center; }
 .axis-name { font-size: 0.88rem; font-weight: 600; }
@@ -340,7 +338,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
   .demo-head { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
 
-.panel-title { display: flex; align-items: center; gap: 0; }
+.panel-title, .page-title { display: flex; align-items: center; gap: 0; }
+.page-title .help { margin-left: 4px; }
 .help { position: relative; display: inline-flex; align-items: center; vertical-align: middle; }
 .help-btn { width: 32px; height: 32px; margin: -5px -5px -5px -1px; padding: 0; border: 0; background: transparent; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); }
 .help-dot { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 650; line-height: 1; transition: color .15s, border-color .15s, background .15s; }

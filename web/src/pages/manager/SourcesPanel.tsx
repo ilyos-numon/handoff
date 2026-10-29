@@ -34,7 +34,7 @@ export function SourcesPanel({ leaver, onChanged }: { leaver: string; onChanged:
   const titleLen = charLen(title.trim()), textLen = charLen(text.trim());
 
   return (
-    <Panel title="업무 자료" desc="위키·런북을 넣으면 거기 나온 이름으로 질문을 만듭니다.">
+    <Panel title="업무 자료" help="manager.sources" desc="위키·런북을 넣으면 거기 나온 이름으로 질문을 만듭니다.">
       {sources.loading && !sources.data ? <Skeleton lines={2} /> : (
         <div className="stack" style={{ ["--gap" as string]: "10px" }}>
           <p className="small"><strong className="num">{list.length}</strong>건 저장됨</p>

@@ -17,7 +17,7 @@ export function MyQuestionsPanel({ load, leaver }: { load: Load; leaver: string 
     .sort((a, b) => +b.id.slice(1) - +a.id.slice(1));
 
   return (
-    <Panel title="내가 남긴 질문" desc="질문을 누르면 퇴사자 답을 볼 수 있어요.">
+    <Panel title="내가 남긴 질문" help="manager.myQuestions" desc="질문을 누르면 퇴사자 답을 볼 수 있어요.">
       {open ? (
         <QuestionThreadView leaver={leaver} qid={open} asker="manager"
           onBack={() => { setOpen(null); void reload(); }} />

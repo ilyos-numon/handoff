@@ -24,7 +24,7 @@ export function PriorityForm({ leaver, onQueued }: { leaver: string; onQueued: (
   const submit = (e: FormEvent) => { e.preventDefault(); if (len) void act.run(); };
 
   return (
-    <Panel title="꼭 남겨 달라고 할 질문" desc="다음 세션에 가장 먼저 나갑니다.">
+    <Panel title="꼭 남겨 달라고 할 질문" help="manager.priority" desc="다음 세션에 가장 먼저 나갑니다.">
       <form className="stack" onSubmit={submit} style={{ ["--gap" as string]: "10px" }}>
         <textarea className="textarea" rows={3} value={text} onChange={(e) => setText(e.target.value)}
           placeholder="예: 정산 배치가 새벽에 실패하면 누가 깨어 있어야 하나요?" aria-label="우선 질문" />

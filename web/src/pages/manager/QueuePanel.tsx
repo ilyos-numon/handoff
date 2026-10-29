@@ -19,7 +19,7 @@ export function QueuePanel({ load }: { load: Load }) {
   const count = (s: QueueStatus) => (data ?? []).filter((q) => q.status === s).length;
 
   return (
-    <Panel title="다음 세션에 물을 질문" desc="위에서부터 한 세션에 두어 개씩 먼저 나갑니다.">
+    <Panel title="다음 세션에 물을 질문" help="manager.queue" desc="위에서부터 한 세션에 두어 개씩 먼저 나갑니다.">
       <div className="seg-light" role="group" style={{ marginBottom: 12 }}>
         {FILTERS.map((s) => (
           <button key={s} type="button" aria-pressed={f === s} onClick={() => setF(s)}>
