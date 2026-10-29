@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { DemoBar } from "../components/DemoBar";
 import { Logo } from "../components/Logo";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { Blocked } from "../components/RoleGate";
 import { Button } from "../components/ui";
 import { Api, ApiError, IN_FRAME, userMessage } from "../lib/api";
@@ -44,11 +45,14 @@ export function DemoPage() {
       <DemoBar />
       <header className="demo-head">
         <Link to="/intro" className="brand"><Logo />Handoff</Link>
-        <p className="small ink2">
-          팀장이 자료와 우선 질문을 준비했고, 퇴사자의 첫 세션 답변이 이미 들어 있습니다.
-          후임 창에서 질문해 보고, 퇴사자 창에서 ‘세션 시작’을 눌러 두 번째 세션을 이어 가 보세요. 이 공간은 하루 뒤 지워집니다.
-        </p>
-        <p className="small demo-warn">연습용 공간입니다. 실제 이름·연락처·회사 정보는 넣지 마세요. 서버가 쉬거나 하루가 지나면 지워집니다.</p>
+        <div className="demo-head-text">
+          <p className="small ink2">
+            팀장이 자료와 우선 질문을 준비했고, 퇴사자의 첫 세션 답변이 이미 들어 있습니다.
+            후임 창에서 질문해 보고, 퇴사자 창에서 ‘세션 시작’을 눌러 두 번째 세션을 이어 가 보세요. 이 공간은 하루 뒤 지워집니다.
+          </p>
+          <p className="small demo-warn">연습용 공간입니다. 실제 이름·연락처·회사 정보는 넣지 마세요. 서버가 쉬거나 하루가 지나면 지워집니다.</p>
+        </div>
+        <ThemeToggle />
       </header>
       {error ? (
         <Blocked heading="데모를 열지 못했습니다" body={error}>
