@@ -12,6 +12,7 @@ LINKED_DOCS = [
     "docs/usability-test-kit.md",
     "docs/deploy-cloudflare.md",
     "docs/deploy-render.md",
+    "docs/deploy-gcp.md",
     "docs/vision.md",
     "docs/deploy.md",
     "docs/usage.md",
@@ -19,7 +20,7 @@ LINKED_DOCS = [
     "web/README.md",
 ]
 README_FIRST_60 = [
-    "demo.gif", "demo.mp4", "architecture.svg", "https://handoff-4krf.onrender.com/demo", "## 핵심 기능", "## 설계 원칙", "make demo",
+    "demo.gif", "demo.mp4", "architecture.svg", "https://handoff-495289802616.asia-northeast3.run.app/demo", "## 핵심 기능", "## 설계 원칙", "make demo",
 ]
 PRESERVED_HEADINGS = [
     "## 바로 해 보기", "## 실제 사용 흐름", "## 구조", "## 철학", "## 문제", "## 방향", "## 하지 않는 것",
@@ -32,8 +33,8 @@ NOT_DOING = [
 ]
 SVG_TEXTS = [
     "방문자 브라우저",
-    "호스트: Render 무료 웹 서비스 (대안: Cloudflare Containers)",
-    "Docker 컨테이너 1개 (15분 쉬면 잠듦)",
+    "호스트: Google Cloud Run 서울 (예비: Render 무료)",
+    "Docker 컨테이너 최대 1개 (요청 없으면 0개)",
     "FastAPI 앱 (화면 web/dist + API)",
     "초대 링크 쿠키 · 역할 정책",
     "SQLite + Qdrant (컨테이너 디스크, 재시작 시 초기화)",
@@ -76,6 +77,12 @@ def test_readme_first_screen() -> None:
     text = _read("README.md")
     assert text.count("YOUR-SUBDOMAIN") == 0
     assert text.count("<!-- DEMO_URL") == 1
+
+
+def test_gcp_deploy_doc() -> None:
+    text = _read("docs/deploy-gcp.md")
+    for needle in ("--port 7860", "--max-instances 1", "--memory 1Gi", "HANDOFF_AUTH_SECRET", "roles/run.builder"):
+        assert needle in text, needle
 
 
 def test_render_deploy_doc() -> None:

@@ -1,6 +1,8 @@
 # 공개 데모 배포 (Render 무료)
 
-현재 공개 데모: https://handoff-4krf.onrender.com/demo
+> 예비 배포. 현재 공개 데모는 Google Cloud Run([deploy-gcp.md](deploy-gcp.md)).
+
+예비 주소: https://handoff-4krf.onrender.com/demo
 
 로컬에서는 `make demo` 한 줄이면 된다. 이 문서는 저장소 루트 `Dockerfile` 을 수정 없이 Render 무료 웹 서비스로 올리는 방법이다. 대안 문서: [deploy-cloudflare.md](deploy-cloudflare.md)(유료: Workers Paid 필요), [deploy.md](deploy.md)(Hugging Face Spaces, 계정 무료 실행 한도 0 으로 중단).
 

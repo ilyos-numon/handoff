@@ -20,12 +20,12 @@
 
   <!-- host -->
   <rect x="90" y="250" width="540" height="64" rx="10" fill="#ecfdf7" stroke="#14b8a6" stroke-width="1.5"/>
-  <text x="360" y="287" font-size="16" font-weight="600" fill="#1e293b" text-anchor="middle">호스트: Render 무료 웹 서비스 (대안: Cloudflare Containers)</text>
+  <text x="360" y="287" font-size="16" font-weight="600" fill="#1e293b" text-anchor="middle">호스트: Google Cloud Run 서울 (예비: Render 무료)</text>
 
   <!-- container frame -->
   <rect x="60" y="370" width="1080" height="300" rx="16" fill="#f8fafc" stroke="#14b8a6" stroke-width="1.5"/>
   <rect x="480" y="388" width="10" height="10" rx="2" fill="#14b8a6"/>
-  <text x="500" y="398" font-size="15" font-weight="700" fill="#0f766e">Docker 컨테이너 1개 (15분 쉬면 잠듦)</text>
+  <text x="500" y="398" font-size="15" font-weight="700" fill="#0f766e">Docker 컨테이너 최대 1개 (요청 없으면 0개)</text>
 
   <line x1="240" y1="314" x2="240" y2="500" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
   <text x="256" y="350" font-size="14" fill="#475569">PORT=7860 으로 전달</text>

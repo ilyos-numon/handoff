@@ -1,4 +1,4 @@
-> 대안(중단: 계정 무료 실행 한도 0). 현재 공개 데모는 Render 무료([deploy-render.md](deploy-render.md)).
+> 대안(중단: 계정 무료 실행 한도 0). 현재 공개 데모는 Google Cloud Run([deploy-gcp.md](deploy-gcp.md)), 예비는 Render 무료([deploy-render.md](deploy-render.md)).
 
 # 공개 데모 배포 (Hugging Face Spaces)
 
