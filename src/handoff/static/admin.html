@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>인수인계 관리</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="card">
+    <h1>인수인계 관리</h1>
+    <p id="admin-error" class="error hidden"></p>
+
+    <h2>퇴사자 등록</h2>
+    <p class="report-status">실명·이메일 대신 알아볼 수 있는 별칭만 적으세요.</p>
+    <form id="leaver-form" class="report-form">
+      <input id="alias-input" type="text" maxlength="30" placeholder="별칭 (예: 결제팀 백엔드)">
+      <button id="leaver-create" type="submit" class="primary">퇴사자 등록</button>
+    </form>
+    <p id="admin-status" class="report-status"></p>
+
+    <h2>퇴사자 목록</h2>
+    <p class="report-status">링크는 직접 전달하세요. 이 서비스는 이메일을 보내지 않습니다.</p>
+    <ul id="leavers" class="report-list"></ul>
+  </main>
+  <script src="/static/admin.js"></script>
+</body>
+</html>
