@@ -165,7 +165,7 @@ def test_live_health_and_env_name() -> None:
         [
             gcloud, "run", "services", "describe", "handoff",
             "--region", "asia-northeast3",
-            "--project", "handoff-demo-513200",
+            "--project", "illy-portfolio",
             "--format", "value(spec.template.spec.containers[0].env[].name)",
         ],
         capture_output=True,

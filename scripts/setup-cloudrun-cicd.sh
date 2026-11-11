@@ -7,8 +7,8 @@
 # 종료코드: 0 성공, 1 실행 오류, 2 사용법 오류
 set -euo pipefail
 
-PROJECT_ID=${PROJECT_ID:-handoff-demo-513200}
-PROJECT_NUMBER=${PROJECT_NUMBER:-495289802616}
+PROJECT_ID=${PROJECT_ID:-illy-portfolio}
+PROJECT_NUMBER=${PROJECT_NUMBER:-1072416881206}
 REGION=${REGION:-asia-northeast3}
 GH_REPO=${GH_REPO:-ilyos-numon/handoff}
 GH_USER=${GH_USER:-ilyos-numon}
