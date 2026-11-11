@@ -1,0 +1,118 @@
+name: deploy-cloudrun
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency: deploy-cloudrun
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+      DEPLOY_SA: ${{ vars.GCP_DEPLOY_SA }}
+      SERVICE: handoff
+    steps:
+      - name: Check variables
+        id: gate
+        run: |
+          if [ -z "$PROJECT_ID" ] || [ -z "$WIF_PROVIDER" ]; then
+            echo "::notice::GCP_PROJECT_ID or GCP_WIF_PROVIDER is not set; deploy skipped"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "$REGION" ] || [ -z "$DEPLOY_SA" ]; then
+            echo "::error::variables GCP_REGION and GCP_DEPLOY_SA must be set"
+            exit 1
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: steps.gate.outputs.enabled == 'true'
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - if: steps.gate.outputs.enabled == 'true'
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Free runner disk
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Build and push image
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          image="$REGION-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/handoff:$GITHUB_SHA"
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          docker build -t "$image" .
+          docker push "$image"
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+
+      # No env or service-account flags: the existing env (HANDOFF_AUTH_SECRET) and runtime SA are kept.
+      - name: Deploy to Cloud Run
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --image "$IMAGE" \
+            --region "$REGION" \
+            --allow-unauthenticated \
+            --port 7860 \
+            --cpu 1 \
+            --memory 1Gi \
+            --min-instances 0 \
+            --max-instances 1 \
+            --concurrency 80 \
+            --timeout 300 \
+            --cpu-boost \
+            --quiet
+
+      - name: Check revision and env names
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          rev=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.latestReadyRevisionName)')
+          if [ -z "$rev" ]; then
+            echo "::error::latest ready revision not found"
+            exit 1
+          fi
+          echo "revision=$rev"
+          echo "REV=$rev" >> "$GITHUB_ENV"
+          # Only env names are read; values are never printed.
+          names=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(spec.template.spec.containers[0].env[].name)')
+          if ! printf '%s\n' "$names" | tr ';,' '\n' | grep -qx HANDOFF_AUTH_SECRET; then
+            echo "::error::env name HANDOFF_AUTH_SECRET is missing on $SERVICE"
+            exit 1
+          fi
+          echo "env name HANDOFF_AUTH_SECRET present"
+
+      - name: Wait for health
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          url=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')
+          if [ -z "$url" ]; then
+            echo "::error::service URL not found"
+            exit 1
+          fi
+          echo "url=$url"
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$url/health" || true)
+            echo "poll $i: $code"
+            if [ "$code" = "200" ]; then
+              echo "Deployed: $url ($REV)" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::$url/health not 200 within 10 minutes"
+          exit 1
