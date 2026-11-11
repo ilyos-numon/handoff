@@ -1,0 +1,244 @@
+# 핸드오프 (Handoff)
+[![공개 데모](https://badgen.net/badge/demo/live%20on%20Cloud%20Run/4285F4)](https://handoff-1072416881206.asia-northeast3.run.app/demo) [![License: MIT](https://badgen.net/badge/license/MIT/yellow)](LICENSE) ![Python 3.12](https://badgen.net/badge/Python/3.12/3776AB) ![FastAPI](https://badgen.net/badge/FastAPI/0.115%2B/009688) ![React 18](https://badgen.net/badge/React/18/61DAFB)
+
+**인수인계 문서는 쓰는 사람이 뭘 아는지 모른 채 쓰입니다. 그래서 핸드오프는 퇴사자에게 문서를 쓰게 하지 않고, 매일 15분 질문으로 끌어냅니다.**
+
+퇴사가 정해진 사람이 마지막 몇 주 동안 매일 15분, 화면이 던지는 질문에 답하기만 하면 그 사람의 업무 지식이 후임이 물어볼 수 있는 인수인계 기록으로 남습니다. 후임은 문서를 뒤지는 대신 질문하고 근거와 함께 답을 받으며, 기록에 없는 질문은 다음 날 퇴사자에게 다시 돌아갑니다. 팀장은 어느 업무가 아직 비어 있는지만 보고, 답변 내용을 들여다보거나 사람을 평가하지 않습니다.
+
+<!-- DEMO_URL: 공개 데모는 Google Cloud Run(서울, Docker)이고 예비는 Render 무료다. 주소가 바뀌면 아래 링크를 고친다 (docs/deploy-gcp.md) -->
+**바로 써 보기:** [공개 데모](https://handoff-1072416881206.asia-northeast3.run.app/demo) (예비 주소: [Render](https://handoff-4krf.onrender.com/demo), 쉬다가 첫 접속 30~60초) · 로컬은 `make demo` · [90초 영상](docs/media/demo.mp4) · 팀장·퇴사자·후임 화면을 한 페이지에서 나란히 보는 데모
+
+![데모](docs/media/demo.gif)
+
+## 핵심 기능
+- **매일 15분 질문 세션**: 퇴사자는 쓰지 않고 답한다. 질문은 담당 시스템·반복 업무·사고 이력·관계자 네 축으로 깊어지고, 세션을 마치면 오늘 요약 3줄이 남는다.
+- **후임 질문 → 근거 있는 답**: 후임은 문서를 뒤지는 대신 기록에 질문하고 근거·확실도와 함께 답을 받는다. 기록에 없으면 지어내지 않고, 그 질문은 퇴사자에게 다시 돌아간다.
+- **팀장은 빈 곳만 본다**: 네 축별 커버리지와 빈 구멍을 보고 꼭 남겨 달라는 우선 질문을 건다. 답변 원문·개인별 깊이는 볼 수 없다.
+- **산출물 5종**: 쌓인 지식 카드로 런북·30일 온보딩·함정 Top10·ADR·사전 부검 산출물을 만든다.
+
+## 화면 둘러보기
+데모 데이터는 퇴사자가 첫 세션을 막 마친 상태에서 시작한다. 화면은 `make demo` 와 같은 데모 모드(녹화 재생, API 키 없음)를 그대로 찍었다.
+
+<table>
+<tr>
+<td><img src="docs/media/screenshots/01-demo-split.png" width="420" alt="세 역할 나란히 보기"><br>세 역할을 한 페이지에서 나란히 보는 데모</td>
+<td><img src="docs/media/screenshots/02-leaver-session.png" width="420" alt="퇴사자 질문 세션"><br>퇴사자는 쓰지 않고 질문에 답한다</td>
+</tr>
+<tr>
+<td><img src="docs/media/screenshots/03-leaver-summary.png" width="420" alt="세션 요약"><br>세션을 마치면 오늘 요약 3줄</td>
+<td><img src="docs/media/screenshots/04-successor-answer.png" width="420" alt="후임 질문하기"><br>후임은 근거·확실도와 함께 답을 받는다</td>
+</tr>
+<tr>
+<td><img src="docs/media/screenshots/05-successor-thread.png" width="420" alt="후임 넘긴 질문"><br>기록에 없던 질문은 퇴사자에게 넘어가 대화로 돌아온다</td>
+<td><img src="docs/media/screenshots/06-manager-status-help.png" width="420" alt="팀장 빈 곳 보기"><br>팀장은 빈 곳만 본다 — "?" 로 용어 설명<br><sub>막대는 퇴사자가 세션을 마감할수록 찬다. 데모 첫 세션의 답은 모두 추가 질문이라 아직 0/10 이다.</sub></td>
+</tr>
+<tr>
+<td><img src="docs/media/screenshots/07-manager-ask.png" width="420" alt="팀장 질문 남기기"><br>꼭 남겨 달라는 우선 질문을 건다</td>
+<td><img src="docs/media/screenshots/08-manager-docs-runbook.png" width="420" alt="팀장 런북 생성"><br>쌓인 지식으로 런북 같은 산출물을 만든다</td>
+</tr>
+<tr>
+<td><img src="docs/media/screenshots/09-intro-roles-dark.png" width="420" alt="역할 소개 다크 테마"><br>역할 소개 (다크 테마)</td>
+<td><img src="docs/media/screenshots/10-mobile-successor.png" width="420" alt="모바일 후임 화면"><br>모바일 폭 후임 화면: 질문하기 탭과 근거가 붙은 답</td>
+</tr>
+</table>
+
+## 아키텍처
+![아키텍처](docs/media/architecture.svg)
+
+공개 데모는 Google Cloud Run(서울 리전)에 Docker 컨테이너 1개로 올라가 있고, 그 안의 FastAPI 앱 하나가 화면(`web/dist`)과 API 를 같은 출처에서 내준다. 역할은 초대 링크 쿠키와 정책 파일로 나뉘고, 데이터는 컨테이너 안의 SQLite·Qdrant 에 있다. 요청이 없으면 인스턴스가 0개로 줄고, 재시작·재배포 때 데이터가 초기화된다. 연습 공간이 흩어지지 않도록 인스턴스는 최대 1개로 묶었다. 같은 `Dockerfile` 이 수정 없이 Render 무료(예비)와 Cloudflare Containers(대안)에도 올라간다. 공개 데모의 답은 녹화 재생이나 내장 예시 답으로 만들어 외부 LLM 을 부르지 않는다. 로컬 `make demo` 는 같은 FastAPI 앱을 그대로 띄운다. 문제 정의부터 버그·품질 평가까지는 [케이스 스터디](docs/case-study.md)에 있다.
+
+## 설계 원칙
+- **감시 도구가 아니다**: 팀장은 본인이 넣은 우선 질문의 답 외에는 답변 원문·세션 요약·개인별 깊이를 볼 수 없다. 정책에 없는 경로는 거부한다.
+- **기록에 없으면 지어내지 않는다**: 지식베이스 답은 주장 단위로 근거를 검증하고, 근거가 없으면 답 대신 질문을 퇴사자에게 넘긴다.
+- **키 없이 데모**: `make demo` 와 공개 데모는 녹화된 답을 재생해 API 키가 필요 없다.
+- **데이터 최소**: 계정·비밀번호·이름·이메일을 받지 않고 퇴사자는 별칭으로 등록한다. 데모 연습 공간은 24시간 뒤 만료돼 지워진다.
+
+## 더 읽을 거리
+- [케이스 스터디: 감시 도구가 되지 않는 인수인계](docs/case-study.md)
+- [90초 데모 영상 대본](docs/demo-video-script.md)
+- [역할극 사용성 테스트 키트](docs/usability-test-kit.md)
+- [공개 데모 배포 (Google Cloud Run)](docs/deploy-gcp.md) — `main` push 자동 배포(GitHub Actions) · 예비: [Render 무료](docs/deploy-render.md) · 대안: [Cloudflare Containers](docs/deploy-cloudflare.md) · [Hugging Face Spaces](docs/deploy.md)
+- [사용 문서: 환경변수·API·품질 평가](docs/usage.md)
+
+## 바로 해 보기
+[uv](https://docs.astral.sh/uv/) 와 Node.js 24(npm 포함)가 있으면 된다. API 키는 필요 없다 (녹화된 답을 재생한다).
+```bash
+uv sync
+make demo        # 웹 화면을 빌드한 뒤 "데모 주소: http://localhost:8780/demo" 가 뜨면 브라우저로 연다
+make try         # 인증을 켠 실제 흐름: 관리자·퇴사자·후임·팀장 창 4개가 따로 열린다 (Ctrl+C 로 종료)
+```
+`make try` 의 네 창은 역할마다 쿠키가 분리돼 있어서, 링크를 다른 곳에서 열려면 역할마다 다른 브라우저(또는 프로필)를 쓴다. 처음이면 `uv run playwright install chromium` 을 먼저 실행하고, 포트·데이터 폴더는 `make try TRY_ARGS="--port 8781 --data-dir ./data/try"` 처럼 바꾼다.
+`make demo` 는 먼저 `make web` 으로 `web/` 의 화면을 빌드한다. 이미 최신이면 빌드를 건너뛴다.
+`/demo` 를 열면 바로 나만의 연습 공간이 생기고 퇴사자의 첫 세션 답변까지 기록돼 있다(퇴사자 창에는 열린 세션이 없어 `세션 시작` 을 누르면 두 번째 세션이 이어진다). 이어서 할 일은 [시연 시나리오](docs/demo-scenario.md) 11단계부터.
+
+## 실제 사용 흐름
+1. 관리자가 관리 화면(`/admin`)에서 퇴사자를 별칭으로 등록한다.
+2. 퇴사자·후임·팀장용 초대 링크 3개를 만든다.
+3. 담당자가 링크를 각자에게 직접 전달한다 (이 서비스는 메일을 보내지 않는다).
+4. 퇴사자는 매일 15분 질문에 답하고, 팀장은 빈 업무 영역 리포트를 보고, 후임은 기록에 질문한다.
+
+## 구조
+화면은 `web/` 의 React 앱이다. `make web` 이 `web/dist` 로 빌드하면 API 서버가 같은 출처에서 그 파일을 그대로 내준다. 별도 프론트 서버나 CORS 설정이 없다.
+```mermaid
+flowchart LR
+  W["web/ React + Vite"] -- make web --> D["web/dist"]
+  subgraph Browser["브라우저"]
+    L["퇴사자 화면 /"]
+    C["후임 화면 /chat"]
+    R["팀장 화면 /report"]
+    A["관리 화면 /admin"]
+  end
+  subgraph API["FastAPI (화면과 API 같은 출처)"]
+    F["화면 서빙: web/dist"]
+    G["RBAC: 초대 링크 쿠키 + casbin 정책"]
+    S["세션 서비스"]
+    K["지식 루프 서비스: 카드·빈 구멍·후임 질문·산출물"]
+  end
+  subgraph Local["로컬 저장소"]
+    DB[("SQLite")]
+    Q[("Qdrant 로컬")]
+  end
+  P["LLM 공급자: fake / qwen / replay"]
+  D --> F
+  F -. 화면 .-> L & C & R & A
+  L & C & R & A --> G
+  G --> S & K
+  S & K --> DB
+  K --> Q
+  S & K --> P
+```
+
+## 철학
+인수인계 문서는 쓰는 사람이 뭘 아는지 모른 채 쓰인다. 질문하는 쪽이 모르는 걸 끌어내야 지식이 남는다.
+
+## 문제
+퇴사 직전에 쓴 문서 한 장에는 "왜 그렇게 했는지", "어디가 함정인지", "누구한테 물어야 하는지"가 빠진다.
+그래서 후임은 같은 실수를 반복한다.
+
+## 방향
+질문은 담당 시스템·반복 업무·사고 이력·관계자 네 축으로 깊어지고, 답변은 후임이 질문하는 지식베이스가 된다.
+답이 없는 영역(빈 구멍)은 퇴사 전에 팀장에게 보여 채운다.
+
+## 하지 않는 것
+- 감시·평가 용도 (팀장은 본인이 남긴 우선 질문의 답 외에는 답변 원문·세션 요약·개인별 깊이를 볼 수 없다)
+- 코드·시스템 자동 문서화
+
+## MVP
+- 질문 트리 1개 직군(백엔드 개발자), 텍스트 입력 (음성은 다음)
+- 10세션 후 지식베이스에 질문 20개를 던져 답변 품질 확인 → 결과는 [사용 문서의 품질 평가](docs/usage.md#품질-평가)
+
+## 실행 방법
+환경변수 전체 표, API 예시, 품질 평가 수치는 [docs/usage.md](docs/usage.md) 에 있다. 설계 판단은 [케이스 스터디](docs/case-study.md), 공개 배포는 [docs/deploy-gcp.md](docs/deploy-gcp.md), 완성 모습은 [docs/vision.md](docs/vision.md).
+
+### 요구사항과 설치
+- [uv](https://docs.astral.sh/uv/) 와 Node.js 24(npm 포함)가 필요하다. Python 3.12는 uv가 설치한다. `uv sync` 후 `make web` 으로 화면을 빌드한다(`web/` 에서 `npm ci`·`npm run build`, 최신이면 건너뜀).
+- 실제 공급자(qwen)로 돌릴 때만 OpenAI 호환 Qwen API 키가 필요하다. fake 모드와 데모 모드(replay)는 키 없이 돈다.
+- 설정을 바꾸려면 `cp .env.example .env` 후 값을 수정하고 명령에 `--env-file .env` 를 붙인다 (앱은 `.env` 를 직접 읽지 않는다). 키는 `.env` 에만 두고 커밋하지 않는다.
+
+### 서버 실행
+fake 공급자 (키 불필요):
+```bash
+make web
+uv run uvicorn handoff.main:create_app --factory --port 8780
+```
+`web/dist` 가 있으면 `/` 부터 새 화면이 뜬다. 빌드가 없거나 `HANDOFF_WEB_DIST=off` 를 주면 `src/handoff/static/` 의 옛 화면으로 돌아간다.
+
+qwen 공급자 (`.env` 에 `HANDOFF_PROVIDER=qwen`, `HANDOFF_LLM_API_KEY` 설정):
+```bash
+uv run --env-file .env uvicorn handoff.main:create_app --factory --port 8780
+```
+준비 확인: `curl -sf http://localhost:8780/health` → `{"status":"ok"}`. 인증 없이 띄우기(평가 도구, API 예시용)는 앞에 `HANDOFF_AUTH=off` 를 붙인다.
+
+화면·프록시·API 문서 관련 설정(나머지 환경변수는 [docs/usage.md](docs/usage.md)):
+- `HANDOFF_WEB_DIST`: 서빙할 빌드 폴더. 기본은 저장소의 `web/dist`, `off` 면 옛 화면.
+- `HANDOFF_TRUSTED_PROXIES`: `X-Forwarded-For` 를 믿을 상대(쉼표 목록, `*`·IP·CIDR·호스트). 기본은 빈 값이라 헤더를 무시하고 접속 주소로 데모 요청 수를 센다. `handoff-demo --public`(Docker)은 기본 `*`. 리버스 프록시를 앞에 두면 그 주소(예: `localhost`)를 준다.
+- `HANDOFF_API_DOCS`: `/docs`·`/redoc`·`/openapi.json` 을 열지(`on`/`off`). 기본은 인증을 따라 인증 켬이면 닫히고 인증 끔이면 열린다.
+
+데모 모드를 `make demo` 대신 `uv run uvicorn …` 으로 직접 띄울 때는 `--no-proxy-headers` 를 붙인다. uvicorn 은 기본으로 루프백 상대의 `X-Forwarded-For` 를 믿어 접속 주소를 바꿔 버리므로, 그대로 두면 헤더를 바꿔 요청 수 제한을 피할 수 있다(`FORWARDED_ALLOW_IPS` 를 실제 프록시로 좁혀도 된다).
+
+화면을 고치며 개발할 때는 Vite 개발 서버(`http://localhost:5173`)가 API 경로를 8780 으로 넘긴다. 실행 방법은 [web/README.md](web/README.md).
+
+### 역할과 초대 링크
+서버는 기본으로 인증을 켠 채 뜬다 (`HANDOFF_AUTH=on`). 계정·비밀번호·이름·이메일은 받지 않는다. 사람마다 역할 하나와 퇴사자 id 하나를 담은 서명된 초대 링크를 만들어 건네면, 링크를 연 브라우저에 로그인 쿠키(`handoff_session`, HttpOnly, 7일)가 붙고 그 역할의 화면으로 이동한다.
+
+관리 화면으로 링크 만들기 (실제 사용):
+1. 첫 관리자 링크를 명령으로 만든다. 서버와 같은 `HANDOFF_DATA_DIR`·`HANDOFF_AUTH_SECRET` 으로 실행한다.
+   ```bash
+   uv run python -m handoff.rbac.cli admin
+   ```
+2. 출력된 링크를 열면 관리 화면(`/admin`, "인수인계 관리")으로 간다. 퇴사자를 별칭으로 등록하고(실명·이메일 금지), 목록에서 퇴사자·후임·팀장 링크를 만들어 복사한다.
+3. 링크는 담당자가 직접 전달한다. 링크 앞부분 주소는 `HANDOFF_PUBLIC_URL` 이 있으면 그 값, 없으면 요청이 들어온 주소다.
+- 관리자(`admin`)는 링크 발급과 퇴사자 등록만 한다. 퇴사자 데이터(세션·카드·리포트)는 볼 수 없다. 팀장은 링크를 만들 수 없다.
+
+명령으로 직접 만들기 (시연·스크립트용):
+```bash
+uv run python -m handoff.rbac.cli invite --role leaver --leaver default
+uv run python -m handoff.rbac.cli invite --role successor --leaver default
+uv run python -m handoff.rbac.cli invite --role manager --leaver default
+```
+- `--role` 은 `leaver`(퇴사자)·`successor`(후임)·`manager`(팀장), `--leaver` 는 `^[a-z0-9_-]{1,40}$`. 다른 주소로 띄웠으면 `--base-url` 을 준다 (기본 `http://localhost:8780`).
+- 출력은 `http://localhost:8780/auth/accept?token=...` 한 줄이다. 72시간(`HANDOFF_INVITE_TTL_HOURS`) 동안 여러 번 쓸 수 있고 개별 폐기는 없다. 전부 무효로 하려면 `auth_secret` 파일을 지우거나 `HANDOFF_AUTH_SECRET` 을 바꾸고 서버를 재시작한다.
+- 지금 역할 확인 `GET /auth/me`, 로그아웃 `POST /auth/logout`.
+- 한 브라우저는 로그인 역할을 하나만 가진다. 링크를 여러 개 열면 마지막에 연 링크의 역할이 남는다.
+- 같은 브라우저 창들은 쿠키를 공유한다. 세 역할을 한 번에 보려면 창 3개를 서로 다른 쿠키 저장소로 연다 (일반 창 / 시크릿 창 / 다른 브라우저).
+- 로그인 쿠키는 localhost 시연용으로 HTTPS 전용 표시 없이 나간다. 실제 운영은 HTTPS 뒤에 두는 것을 전제로 한다.
+- 처음부터 끝까지 따라 하는 3역할 시연 순서는 [docs/demo-scenario.md](docs/demo-scenario.md) 에 있다.
+
+역할별로 열리는 범위 (정책 파일 `src/handoff/rbac/policy.csv`, 정책에 없는 경로는 거부):
+
+| 역할 | 할 수 있는 것 | 할 수 없는 것 |
+|------|---------------|---------------|
+| 퇴사자 | 자기 세션 시작·답변·종료, 자기 커버리지·카드·자료 목록·산출물 보기, 답변 깊이·암묵지 판정 | 후임 질문, 다른 퇴사자 데이터 |
+| 후임 | 지식베이스 질문(`/kb/ask`)·울타리 질문, 내가 넘긴 질문의 답 대화 보기, 카드·at-risk·산출물 보기, 장애 훈련 | 세션 답변 원문·요약, 큐 조작, 다른 퇴사자 지식 |
+| 관리자 | 퇴사자 등록·목록, 역할별 초대 링크 발급(`/admin/*`) | 퇴사자 데이터 전부 |
+| 팀장 | 커버리지·빈 구멍·모르는 영역·질문 큐·자료 목록·at-risk·산출물 보기, 자료 적재·질문 생성·사전 부검 질문·우선 질문 지정·산출물 생성, 내가 남긴 질문의 답 보기 | **본인이 넣은 우선 질문 외의 답변 원문·세션 요약·답변별 깊이·카드 목록·훈련 결과** (감시·평가에 쓰이지 않게 막는다) |
+
+- 모든 역할은 초대에 적힌 퇴사자 id 의 데이터만 본다. 경로·쿼리·본문의 `leaver` 나 세션·훈련의 퇴사자가 다르면 403 이고, 본문을 읽을 수 없으면 거부한다(fail-closed).
+- 지식베이스 검색은 퇴사자 id 로 걸러진다. 답과 발췌의 이메일·전화번호는 저장 전과 응답 직전에 가린다.
+- 옛 API `POST /kb/query` 는 인증을 켜면 모든 역할에 403 이다. 후임 채팅은 `/kb/ask` 를 쓴다.
+
+### 화면
+| 주소 | 사용자 | 내용 |
+|------|--------|------|
+| `http://localhost:8780/` | 퇴사자 | 세션 시작, 질문에 답하기(큐에서 온 질문은 출처 표시: 팀장 우선 지정·후임 질문·사전 부검·빈 구멍 확인·업무 자료), 남은 시간, 종료 시 오늘 요약 3줄 |
+| `http://localhost:8780/chat` | 후임 | 탭 순서: 질문하기, 넘긴 질문, 인수인계 문서, 지식 카드, 이건 왜 이렇게?, 장애 훈련. 지식베이스 질문(`/kb/ask`)과 근거, 확실도, 답이 없을 때 "퇴사자에게 질문을 넘겼다" 안내와 먼저 물어볼 역할, "왜 이렇게 돼 있나" 울타리 질문, 인수인계 산출물 보기 |
+| `http://localhost:8780/admin` | 관리자 | 퇴사자 등록(별칭), 퇴사자·후임·팀장 초대 링크 만들기·복사 |
+| `http://localhost:8780/demo` | 방문자 (데모 모드) | 연습 공간 만들기, 세 역할 화면 나란히 보기, 역할 전환 |
+| `http://localhost:8780/intro` | 누구나 | 서비스 소개(회사에 들이는 법, 퇴사 전후 누가 언제 무엇을, 기대 효과, 하지 않는 것과 개인정보 원칙, 역할별 안내). 인증 켠 서버에서 로그인 전에 `/` 로 오면 여기로 보낸다 (새 화면 빌드가 있을 때만) |
+| `http://localhost:8780/intro/{role}` | 누구나 | 역할 안내 4개(`leaver`·`successor`·`manager`·`admin`): 언제 쓰나요, 화면에서 하는 일, 볼 수 있는 것과 볼 수 없는 것, 자주 묻는 질문. 각 역할 화면 상단의 "이 화면 안내" 링크로 연다. 그 밖의 값은 404 |
+| `http://localhost:8780/report` | 팀장 | 탭 3개(`?tab=status\|ask\|docs`). **빈 곳 보기**: 진행 상황·빈 구멍 / **질문 남기기**: 꼭 남겨 달라고 할 질문·내가 남긴 질문·다음 세션에 물을 질문 / **자료와 문서**: 업무 자료·인수인계 산출물·조직이 바뀌면 틀려질 지식. 담긴 기능: 네 축별 커버리지(큐 질문 답변 수 포함), 비어 있는 주제, 모의 자료 불러오기·자료로 질문 만들기·사전 부검 질문·빈 구멍 다시 찾기·우선 질문 지정, 질문 큐, 빈 구멍, 아무도 확실히 모르는 영역, 산출물 5종 만들기·보기 |
+
+화면 밝기: 상단 막대·소개의 화면 밝기 버튼을 누를 때마다 기기 설정 → 밝게 → 어둡게 순으로 바뀐다.
+
+화면 공통: 제목·패널 옆 "?" 를 누르면 그 용어·버튼의 뜻이 한두 문장으로 펼쳐진다(Esc·바깥 클릭으로 닫힘, 서버를 부르지 않음).
+
+각 화면은 `/auth/me` 로 역할을 확인하고, 로그인 전이면 "초대 링크로 들어와 주세요.", 다른 역할이면 "이 화면을 볼 권한이 없습니다." 를 보여 준다. 퇴사자 id 는 초대 링크에서 온다. 인증을 끈 서버(`HANDOFF_AUTH=off`)에서는 `?leaver=<id>` 로 고른다 (생략 시 `default`).
+
+세션 규칙: 한 세션 15분(`HANDOFF_SESSION_SECONDS`), 마감 판정은 서버가 하고 유예 30초 뒤 답변을 거부한다. 퇴사자당 10회를 넘는 시작은 409로 거부하고, 새 세션을 시작하면 열려 있던 이전 세션은 자동 종료된다. 세션 상태는 SQLite 에 저장돼 서버를 재시작해도 회차·진행 위치·요약이 남는다.
+
+### 테스트
+단위·E2E 테스트가 있다. API 키 없이 fake 공급자로 돈다.
+
+단위 테스트:
+```bash
+uv run pytest tests/unit -q
+```
+
+E2E 테스트 (서버를 테스트가 직접 띄운다, fake 공급자). 새 화면을 검사하는 테스트가 `web/dist` 를 쓰므로 먼저 빌드한다:
+```bash
+make web
+uv run pytest tests/e2e -q
+```
+
+### 제약
+- 기본 테스트·E2E 는 fake 공급자로 돌아 API 키가 필요 없다. 실제 답변 품질은 qwen 공급자에서만 의미가 있다.
+- qwen 공급자는 답변 원문을 외부 API(LLM·임베딩)로 보낸다. 기기 안 처리가 아니다.
+- 질문 트리는 백엔드 개발자 직군 1개, 입력은 텍스트만 (음성은 다음 단계).
+- 커버리지 리포트는 `/report` 화면과 `GET /coverage` JSON 1장이다. 메일 발송은 하지 않는다. 우선 질문 지정도 `/report` 화면에서 한다.
+- 초대 링크는 메일·메신저로 보내지 않는다. 관리자가 복사해 직접 전달한다.
+- 인증은 초대 링크 하나에 역할 하나·퇴사자 하나다. 계정·SSO·초대 1회용·개별 폐기·여러 퇴사자를 보는 팀장은 없다.
+- 품질 평가는 규칙 기반이며 LLM 심판을 쓰지 않는다. 평가 데이터는 가상 고정 데이터다.
+- 인수인계에 없는 주제의 지어낸 답은 주장 단위 검증으로 qwen 실측 두 회차 모두 0/6 이었다 (검증 전 MVP 는 2/6). 다만 규칙 평가 20문항 기준이고, 검증이 보수적이라 있는 주제도 답하지 않는 경우가 늘었다 (답변 있음 12/20). `HANDOFF_VERIFY_CLAIMS=off` 면 지식베이스 답을 검증 없이 MVP 때처럼 만든다.
+
+## 라이선스
+[MIT](LICENSE)
